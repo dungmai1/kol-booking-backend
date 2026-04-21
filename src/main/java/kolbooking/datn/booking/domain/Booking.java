@@ -1,0 +1,94 @@
+package kolbooking.datn.booking.domain;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+
+@Entity
+@Table(name = "booking")
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
+public class Booking {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @Column(name = "brand_profile_id", nullable = false)
+    private Long brandProfileId;
+
+    @Column(name = "kol_profile_id", nullable = false)
+    private Long kolProfileId;
+
+    @Column(name = "campaign_title", nullable = false, length = 200)
+    private String campaignTitle;
+
+    @Column(name = "campaign_brief", columnDefinition = "text")
+    private String campaignBrief;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(columnDefinition = "jsonb")
+    private String deliverables;
+
+    @Column(nullable = false, precision = 15, scale = 2)
+    private BigDecimal budget;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 32)
+    private BookingStatus status;
+
+    @Column(name = "reject_reason", columnDefinition = "text")
+    private String rejectReason;
+
+    @Column(name = "cancel_reason", columnDefinition = "text")
+    private String cancelReason;
+
+    @Column(name = "invoice_url", length = 500)
+    private String invoiceUrl;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    @PrePersist
+    void prePersist() {
+        Instant now = Instant.now();
+        if (createdAt == null) createdAt = now;
+        if (updatedAt == null) updatedAt = now;
+        if (status == null) status = BookingStatus.PENDING;
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        updatedAt = Instant.now();
+    }
+}

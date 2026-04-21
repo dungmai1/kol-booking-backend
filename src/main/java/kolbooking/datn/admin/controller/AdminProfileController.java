@@ -1,0 +1,94 @@
+package kolbooking.datn.admin.controller;
+
+import jakarta.validation.Valid;
+import kolbooking.datn.admin.dto.RejectReasonRequest;
+import kolbooking.datn.admin.service.AdminProfileService;
+import kolbooking.datn.brand.domain.BrandProfileStatus;
+import kolbooking.datn.kol.domain.KolProfileStatus;
+import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
+
+@RestController
+@RequestMapping("/api/v1/admin")
+@RequiredArgsConstructor
+@PreAuthorize("hasRole('ADMIN')")
+public class AdminProfileController {
+
+    private final AdminProfileService adminProfileService;
+
+    @GetMapping("/kols")
+    public ResponseEntity<Page<Map<String, Object>>> listKols(
+            @RequestParam(required = false) KolProfileStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminProfileService
+                .listKolByStatus(status, PageRequest.of(page, size))
+                .map(k -> Map.of(
+                        "id", k.getId(),
+                        "userId", k.getUserId(),
+                        "displayName", k.getDisplayName(),
+                        "slug", k.getSlug(),
+                        "status", k.getStatus(),
+                        "avgRating", k.getAvgRating(),
+                        "reviewCount", k.getReviewCount(),
+                        "rejectReason", k.getRejectReason() == null ? "" : k.getRejectReason(),
+                        "createdAt", k.getCreatedAt()
+                )));
+    }
+
+    @PostMapping("/kols/{id}/approve")
+    public ResponseEntity<Void> approveKol(@PathVariable Long id) {
+        adminProfileService.approveKol(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/kols/{id}/reject")
+    public ResponseEntity<Void> rejectKol(@PathVariable Long id,
+                                          @Valid @RequestBody(required = false) RejectReasonRequest request) {
+        adminProfileService.rejectKol(id, request == null ? null : request.reason());
+        return ResponseEntity.ok().build();
+    }
+
+    @GetMapping("/brands")
+    public ResponseEntity<Page<Map<String, Object>>> listBrands(
+            @RequestParam(required = false) BrandProfileStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(adminProfileService
+                .listBrandByStatus(status, PageRequest.of(page, size))
+                .map(b -> Map.of(
+                        "id", b.getId(),
+                        "userId", b.getUserId(),
+                        "companyName", b.getCompanyName(),
+                        "industry", b.getIndustry() == null ? "" : b.getIndustry(),
+                        "status", b.getStatus(),
+                        "rejectReason", b.getRejectReason() == null ? "" : b.getRejectReason(),
+                        "createdAt", b.getCreatedAt()
+                )));
+    }
+
+    @PostMapping("/brands/{id}/approve")
+    public ResponseEntity<Void> approveBrand(@PathVariable Long id) {
+        adminProfileService.approveBrand(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/brands/{id}/reject")
+    public ResponseEntity<Void> rejectBrand(@PathVariable Long id,
+                                            @Valid @RequestBody(required = false) RejectReasonRequest request) {
+        adminProfileService.rejectBrand(id, request == null ? null : request.reason());
+        return ResponseEntity.ok().build();
+    }
+}
