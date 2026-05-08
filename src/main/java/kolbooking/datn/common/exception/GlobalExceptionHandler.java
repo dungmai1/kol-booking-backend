@@ -48,8 +48,16 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiResponse<Void>> handleGeneric(Exception ex) {
         log.error("Unhandled exception", ex);
+        // TEMP DIAGNOSTIC: surface exception class + message to client to aid debugging.
+        // Revert before production hardening.
+        Throwable root = ex;
+        while (root.getCause() != null && root.getCause() != root) {
+            root = root.getCause();
+        }
+        String details = ex.getClass().getSimpleName() + ": " + ex.getMessage()
+                + " | rootCause=" + root.getClass().getName() + ": " + root.getMessage();
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ApiResponse.error("Internal server error", ErrorCode.INTERNAL_ERROR));
+                .body(ApiResponse.error(details, ErrorCode.INTERNAL_ERROR));
     }
 
     private String formatFieldError(FieldError fe) {

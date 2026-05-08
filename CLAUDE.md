@@ -21,12 +21,10 @@
   - `spring-boot-starter-web` — REST API
   - `spring-boot-starter-data-jpa` — ORM
   - `spring-boot-starter-security` — xác thực & phân quyền
-  - `spring-boot-docker-compose` — tự động khởi động DB khi chạy dev
-- **Database**: PostgreSQL 16
+- **Database**: PostgreSQL 16 (cài trực tiếp trên máy hoặc dùng Postgres remote như Supabase)
 - **Migration**: Flyway (`flyway-core` + `flyway-database-postgresql`)
 - **Build tool**: Gradle (Groovy DSL)
 - **Tiện ích**: Lombok
-- **Container**: Docker Compose (`compose.yaml`)
 
 ## Cấu trúc thư mục
 
@@ -34,7 +32,6 @@
 kol-booking-backend/
 ├── build.gradle                  # Cấu hình Gradle, dependencies
 ├── settings.gradle               # Tên project: datn
-├── compose.yaml                  # PostgreSQL service cho dev
 ├── src/main/
 │   ├── java/kolbooking/datn/
 │   │   └── DatnApplication.java  # Entry point Spring Boot
@@ -55,11 +52,10 @@ Package gốc: `kolbooking.datn`. Khi thêm module mới (controller, service, e
 
 ## Chạy dự án (dev)
 
-```bash
-# Chạy PostgreSQL qua Docker Compose
-docker compose up -d
+Yêu cầu: Postgres đã chạy sẵn (cục bộ hoặc remote như Supabase) và các biến `SPRING_DATASOURCE_URL` / `SPRING_DATASOURCE_USERNAME` / `SPRING_DATASOURCE_PASSWORD` đã được set (qua `.env` hoặc launcher).
 
-# Chạy Spring Boot (Spring Boot Docker Compose plugin sẽ tự detect compose.yaml)
+```bash
+# Chạy Spring Boot
 ./gradlew bootRun
 
 # Build
@@ -69,11 +65,11 @@ docker compose up -d
 ./gradlew test
 ```
 
-Trên Windows dùng `gradlew.bat` thay cho `./gradlew`.
+Trên Windows dùng `gradlew.bat` thay cho `./gradlew`. Tham khảo `.env.example` cho danh sách biến môi trường.
 
 ## Database & Migration
 
-- DB name: `kol_booking`, user: `kol_user`, port: `5432` (xem `compose.yaml`).
+- Dev: dùng Postgres cục bộ của máy hoặc Supabase remote. Tham số kết nối truyền qua env (`SPRING_DATASOURCE_URL`, `SPRING_DATASOURCE_USERNAME`, `SPRING_DATASOURCE_PASSWORD`) — **không hardcode** trong properties.
 - **Mọi thay đổi schema phải đi qua Flyway migration** trong `src/main/resources/db/migration/`. Không dùng `ddl-auto=update` ở production.
 - Đặt tên file theo quy ước: `V<version>__<description>.sql`, ví dụ `V1__create_kol_table.sql`.
 

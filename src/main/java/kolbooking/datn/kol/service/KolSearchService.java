@@ -12,6 +12,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,6 +22,7 @@ public class KolSearchService {
 
     private final KolProfileRepository kolProfileRepository;
 
+    @Transactional(readOnly = true)
     public PageResponse<KolSummaryResponse> search(KolSearchFilter filter, int page, int size) {
         if (size <= 0) size = 20;
         if (size > 100) size = 100;
@@ -37,6 +39,7 @@ public class KolSearchService {
         );
     }
 
+    @Transactional(readOnly = true)
     public List<KolSummaryResponse> featured(int limit) {
         if (limit <= 0 || limit > 50) limit = 10;
         Pageable p = PageRequest.of(0, limit, Sort.by(Sort.Direction.DESC, "avgRating", "reviewCount"));

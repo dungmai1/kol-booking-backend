@@ -39,14 +39,12 @@
 | **Database** | PostgreSQL 16 |
 | **Migration** | Flyway |
 | **Build Tool** | Gradle (Groovy DSL) |
-| **Containerization** | Docker & Docker Compose |
 | **Utility** | Lombok |
 
 ### Dependencies chính
 - `spring-boot-starter-web` — REST API
 - `spring-boot-starter-data-jpa` — ORM/Database access
 - `spring-boot-starter-security` — Authentication & Authorization
-- `spring-boot-docker-compose` — Tự động khởi động service khi chạy dev
 - `flyway-core` + `flyway-database-postgresql` — Database migration
 - `lombok` — Giảm boilerplate code
 
