@@ -22,6 +22,7 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.BatchSize;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -95,14 +96,17 @@ public class KolProfile {
     private Instant updatedAt;
 
     @OneToMany(mappedBy = "kolProfile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @Builder.Default
     private List<KolSocialChannel> channels = new ArrayList<>();
 
     @OneToMany(mappedBy = "kolProfile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @Builder.Default
     private List<KolPricingPackage> pricingPackages = new ArrayList<>();
 
     @OneToMany(mappedBy = "kolProfile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @BatchSize(size = 50)
     @Builder.Default
     private List<KolPortfolioItem> portfolio = new ArrayList<>();
 

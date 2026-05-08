@@ -1,8 +1,9 @@
 package kolbooking.datn.kol.service;
 
 import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
 import jakarta.persistence.criteria.Predicate;
+import jakarta.persistence.criteria.Root;
+import jakarta.persistence.criteria.Subquery;
 import kolbooking.datn.common.domain.Category;
 import kolbooking.datn.kol.domain.KolPricingPackage;
 import kolbooking.datn.kol.domain.KolProfile;
@@ -20,12 +21,6 @@ public final class KolSpecification {
 
     public static Specification<KolProfile> matches(KolSearchFilter f) {
         return (root, query, cb) -> {
-            boolean isCount = query != null && query.getResultType() != null
-                    && Long.class.equals(query.getResultType());
-            if (query != null && !isCount) {
-                query.distinct(true);
-            }
-
             List<Predicate> predicates = new ArrayList<>();
             predicates.add(cb.equal(root.get("status"), KolProfileStatus.APPROVED));
 
@@ -48,30 +43,50 @@ public final class KolSpecification {
             if (f.minRating() != null) {
                 predicates.add(cb.greaterThanOrEqualTo(root.get("avgRating"), f.minRating()));
             }
-            if (f.hasCategories()) {
-                Join<KolProfile, Category> cats = root.join("categories", JoinType.INNER);
-                predicates.add(cats.get("id").in(f.categoryIds()));
+            if (f.hasCategories() && query != null) {
+                Subquery<Long> sub = query.subquery(Long.class);
+                Root<KolProfile> corr = sub.correlate(root);
+                Join<KolProfile, Category> catJoin = corr.join("categories");
+                sub.select(cb.literal(1L))
+                        .where(catJoin.get("id").in(f.categoryIds()));
+                predicates.add(cb.exists(sub));
             }
-            if (f.hasPlatforms() || f.minFollower() != null || f.maxFollower() != null) {
-                Join<KolProfile, KolSocialChannel> channels = root.join("channels", JoinType.INNER);
+            if ((f.hasPlatforms() || f.minFollower() != null || f.maxFollower() != null) && query != null) {
+                Subquery<Long> sub = query.subquery(Long.class);
+                Root<KolProfile> corr = sub.correlate(root);
+                Join<KolProfile, KolSocialChannel> chJoin = corr.join("channels");
+                List<Predicate> chPreds = new ArrayList<>();
                 if (f.hasPlatforms()) {
-                    predicates.add(channels.get("platform").in(f.platforms()));
+                    chPreds.add(chJoin.get("platform").in(f.platforms()));
                 }
                 if (f.minFollower() != null) {
-                    predicates.add(cb.greaterThanOrEqualTo(channels.get("followerCount"), f.minFollower()));
+                    chPreds.add(cb.greaterThanOrEqualTo(chJoin.get("followerCount"), f.minFollower()));
                 }
                 if (f.maxFollower() != null) {
-                    predicates.add(cb.lessThanOrEqualTo(channels.get("followerCount"), f.maxFollower()));
+                    chPreds.add(cb.lessThanOrEqualTo(chJoin.get("followerCount"), f.maxFollower()));
                 }
+                sub.select(cb.literal(1L));
+                if (!chPreds.isEmpty()) {
+                    sub.where(chPreds.toArray(new Predicate[0]));
+                }
+                predicates.add(cb.exists(sub));
             }
-            if (f.minPrice() != null || f.maxPrice() != null) {
-                Join<KolProfile, KolPricingPackage> pkgs = root.join("pricingPackages", JoinType.INNER);
+            if ((f.minPrice() != null || f.maxPrice() != null) && query != null) {
+                Subquery<Long> sub = query.subquery(Long.class);
+                Root<KolProfile> corr = sub.correlate(root);
+                Join<KolProfile, KolPricingPackage> pkJoin = corr.join("pricingPackages");
+                List<Predicate> pkPreds = new ArrayList<>();
                 if (f.minPrice() != null) {
-                    predicates.add(cb.greaterThanOrEqualTo(pkgs.get("price"), f.minPrice()));
+                    pkPreds.add(cb.greaterThanOrEqualTo(pkJoin.get("price"), f.minPrice()));
                 }
                 if (f.maxPrice() != null) {
-                    predicates.add(cb.lessThanOrEqualTo(pkgs.get("price"), f.maxPrice()));
+                    pkPreds.add(cb.lessThanOrEqualTo(pkJoin.get("price"), f.maxPrice()));
                 }
+                sub.select(cb.literal(1L));
+                if (!pkPreds.isEmpty()) {
+                    sub.where(pkPreds.toArray(new Predicate[0]));
+                }
+                predicates.add(cb.exists(sub));
             }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
