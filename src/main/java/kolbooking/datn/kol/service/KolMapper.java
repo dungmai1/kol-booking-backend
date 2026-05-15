@@ -12,8 +12,6 @@ import kolbooking.datn.kol.dto.KolPublicResponse;
 import kolbooking.datn.kol.dto.KolSocialChannelResponse;
 import kolbooking.datn.kol.dto.KolSummaryResponse;
 
-import java.math.BigDecimal;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -70,19 +68,16 @@ public final class KolMapper {
         );
     }
 
+    /**
+     * Maps to summary using denormalized {@code maxFollowerCount} / {@code minPrice} fields.
+     * Does not touch lazy collections — required to keep /kols/search at O(1) query per page.
+     */
     public static KolSummaryResponse toSummary(KolProfile k) {
-        Long maxFollower = k.getChannels().stream()
-                .map(KolSocialChannel::getFollowerCount)
-                .max(Comparator.naturalOrder())
-                .orElse(0L);
-        BigDecimal minPrice = k.getPricingPackages().stream()
-                .map(KolPricingPackage::getPrice)
-                .min(Comparator.naturalOrder())
-                .orElse(null);
+        Long maxFollower = k.getMaxFollowerCount() == null ? 0L : k.getMaxFollowerCount();
         return new KolSummaryResponse(
                 k.getId(), k.getDisplayName(), k.getSlug(),
                 k.getAvatarUrl(), k.getCity(), k.getCountry(),
-                k.getAvgRating(), k.getReviewCount(), maxFollower, minPrice
+                k.getAvgRating(), k.getReviewCount(), maxFollower, k.getMinPrice()
         );
     }
 }

@@ -27,9 +27,7 @@ import org.hibernate.annotations.BatchSize;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 @Entity
@@ -86,6 +84,14 @@ public class KolProfile {
     @Column(name = "review_count", nullable = false)
     private Integer reviewCount;
 
+    /** Denormalized: max(channels.followerCount). Maintained by KolProfileService when channels CRUD. */
+    @Column(name = "max_follower_count", nullable = false)
+    private Long maxFollowerCount;
+
+    /** Denormalized: min(pricingPackages.price). NULL when no packages. */
+    @Column(name = "min_price", precision = 15, scale = 2)
+    private BigDecimal minPrice;
+
     @Column(name = "reject_reason", columnDefinition = "text")
     private String rejectReason;
 
@@ -98,17 +104,17 @@ public class KolProfile {
     @OneToMany(mappedBy = "kolProfile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @BatchSize(size = 50)
     @Builder.Default
-    private List<KolSocialChannel> channels = new ArrayList<>();
+    private Set<KolSocialChannel> channels = new HashSet<>();
 
     @OneToMany(mappedBy = "kolProfile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @BatchSize(size = 50)
     @Builder.Default
-    private List<KolPricingPackage> pricingPackages = new ArrayList<>();
+    private Set<KolPricingPackage> pricingPackages = new HashSet<>();
 
     @OneToMany(mappedBy = "kolProfile", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @BatchSize(size = 50)
     @Builder.Default
-    private List<KolPortfolioItem> portfolio = new ArrayList<>();
+    private Set<KolPortfolioItem> portfolio = new HashSet<>();
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
@@ -127,6 +133,7 @@ public class KolProfile {
         if (status == null) status = KolProfileStatus.DRAFT;
         if (avgRating == null) avgRating = BigDecimal.ZERO;
         if (reviewCount == null) reviewCount = 0;
+        if (maxFollowerCount == null) maxFollowerCount = 0L;
     }
 
     @PreUpdate

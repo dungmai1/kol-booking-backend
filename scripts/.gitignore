@@ -1,0 +1,4 @@
+.env.test
+.tokens/
+reports/
+fixtures/sample.jpg

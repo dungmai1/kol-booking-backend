@@ -33,6 +33,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
+import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -51,7 +52,15 @@ public class KolProfileService {
 
     @Transactional
     public KolProfileResponse getMyProfile() {
-        KolProfile profile = getOrCreateForCurrentUser();
+        Long userId = SecurityUtils.currentUserId();
+        if (SecurityUtils.currentRole() != Role.KOL) {
+            throw new BusinessException("Only KOL role can manage KOL profile",
+                    ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+        // Single JOIN FETCH for profile + channels + packages + portfolio + categories.
+        // Falls back to create-then-fetch for first-time KOLs.
+        KolProfile profile = kolProfileRepository.findByUserIdWithDetails(userId)
+                .orElseGet(this::getOrCreateForCurrentUser);
         return KolMapper.toDto(profile);
     }
 
@@ -139,7 +148,9 @@ public class KolProfileService {
                 .engagementRate(req.engagementRate())
                 .verified(false)
                 .build();
-        return KolMapper.toDto(channelRepository.save(channel));
+        KolSocialChannelResponse dto = KolMapper.toDto(channelRepository.save(channel));
+        recomputeMaxFollower(profile);
+        return dto;
     }
 
     @Transactional
@@ -152,6 +163,8 @@ public class KolProfileService {
                     ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
         }
         channelRepository.delete(channel);
+        channelRepository.flush();
+        recomputeMaxFollower(profile);
     }
 
     @Transactional
@@ -164,7 +177,9 @@ public class KolProfileService {
                 .price(req.price())
                 .description(req.description())
                 .build();
-        return KolMapper.toDto(packageRepository.save(pkg));
+        KolPricingPackageResponse dto = KolMapper.toDto(packageRepository.save(pkg));
+        recomputeMinPrice(profile);
+        return dto;
     }
 
     @Transactional
@@ -177,6 +192,29 @@ public class KolProfileService {
                     ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
         }
         packageRepository.delete(pkg);
+        packageRepository.flush();
+        recomputeMinPrice(profile);
+    }
+
+    /**
+     * Refreshes {@code kol_profile.max_follower_count} from the current channels.
+     * Must be called after every channel CRUD so search/featured queries can read the
+     * column directly without N+1.
+     */
+    private void recomputeMaxFollower(KolProfile profile) {
+        Long max = channelRepository.findMaxFollowerByProfileId(profile.getId()).orElse(0L);
+        profile.setMaxFollowerCount(max);
+        kolProfileRepository.save(profile);
+    }
+
+    /**
+     * Refreshes {@code kol_profile.min_price} from the current pricing packages.
+     * NULL when KOL has no packages — UI treats that as "contact for quote".
+     */
+    private void recomputeMinPrice(KolProfile profile) {
+        BigDecimal min = packageRepository.findMinPriceByProfileId(profile.getId()).orElse(null);
+        profile.setMinPrice(min);
+        kolProfileRepository.save(profile);
     }
 
     @Transactional
@@ -206,7 +244,8 @@ public class KolProfileService {
 
     @Transactional
     public KolPublicResponse getPublicBySlug(String slug) {
-        KolProfile profile = kolProfileRepository.findBySlug(slug)
+        // Single JOIN FETCH avoids 4 lazy roundtrips per detail page view.
+        KolProfile profile = kolProfileRepository.findBySlugWithDetails(slug)
                 .filter(p -> p.getStatus() == KolProfileStatus.APPROVED)
                 .orElseThrow(() -> new ResourceNotFoundException("KOL not found"));
         return KolMapper.toPublic(profile);

@@ -40,3 +40,4 @@ out/
 .env
 .env.local
 logs/
+/.claude

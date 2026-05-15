@@ -15,8 +15,6 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -47,8 +45,7 @@ public class Booking {
     @Column(name = "campaign_brief", columnDefinition = "text")
     private String campaignBrief;
 
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(columnDefinition = "jsonb")
+    @Column(columnDefinition = "text")
     private String deliverables;
 
     @Column(nullable = false, precision = 15, scale = 2)

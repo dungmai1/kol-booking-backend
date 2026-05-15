@@ -1,0 +1,7 @@
+.tmp/
+.venv/
+__pycache__/
+*.pyc
+data/raw/
+data/images/
+output/*.sql

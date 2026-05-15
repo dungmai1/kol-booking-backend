@@ -9,8 +9,11 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.util.stream.Collectors;
 
@@ -29,6 +32,51 @@ public class GlobalExceptionHandler {
         String details = ex.getBindingResult().getFieldErrors().stream()
                 .map(this::formatFieldError)
                 .collect(Collectors.joining("; "));
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(details, ErrorCode.VALIDATION_FAILED));
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ApiResponse<Void>> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        Class<?> required = ex.getRequiredType();
+        String typeName = required == null ? "expected type" : required.getSimpleName();
+        String details = ex.getName() + ": invalid value '" + ex.getValue() + "' for " + typeName;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(details, ErrorCode.VALIDATION_FAILED));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMissingParam(MissingServletRequestParameterException ex) {
+        String details = "Required parameter '" + ex.getParameterName() + "' is missing";
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(details, ErrorCode.VALIDATION_FAILED));
+    }
+
+    @ExceptionHandler(org.springframework.web.multipart.MultipartException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMultipart(org.springframework.web.multipart.MultipartException ex) {
+        String details = ex.getMessage();
+        HttpStatus status = HttpStatus.BAD_REQUEST;
+        if (ex instanceof org.springframework.web.multipart.MaxUploadSizeExceededException) {
+            status = HttpStatus.PAYLOAD_TOO_LARGE;
+        }
+        return ResponseEntity.status(status)
+                .body(ApiResponse.error(details, ErrorCode.VALIDATION_FAILED));
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        Throwable cause = ex.getMostSpecificCause();
+        String details = "Malformed request body";
+        if (cause instanceof com.fasterxml.jackson.databind.exc.InvalidFormatException ife) {
+            String field = ife.getPath().isEmpty() ? "value" : ife.getPath().get(ife.getPath().size() - 1).getFieldName();
+            Class<?> target = ife.getTargetType();
+            details = field + ": invalid value '" + ife.getValue() + "'"
+                    + (target != null && target.isEnum()
+                        ? " (allowed: " + java.util.Arrays.toString(target.getEnumConstants()) + ")"
+                        : "");
+        } else if (cause != null) {
+            details = cause.getMessage();
+        }
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(ApiResponse.error(details, ErrorCode.VALIDATION_FAILED));
     }
