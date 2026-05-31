@@ -26,21 +26,21 @@ public class AdminUserController {
 
     @GetMapping
     public ApiResponse<PageResponse<AdminUserResponse>> search(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) Role role,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "role", required = false) Role role,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(PageResponse.of(adminUserService.search(q, role, PageRequest.of(page, size))
                 .map(this::toDto)));
     }
 
     @PostMapping("/{id}/ban")
-    public ApiResponse<AdminUserResponse> ban(@PathVariable Long id) {
+    public ApiResponse<AdminUserResponse> ban(@PathVariable("id") Long id) {
         return ApiResponse.ok(toDto(adminUserService.ban(id)));
     }
 
     @PostMapping("/{id}/unban")
-    public ApiResponse<AdminUserResponse> unban(@PathVariable Long id) {
+    public ApiResponse<AdminUserResponse> unban(@PathVariable("id") Long id) {
         return ApiResponse.ok(toDto(adminUserService.unban(id)));
     }
 

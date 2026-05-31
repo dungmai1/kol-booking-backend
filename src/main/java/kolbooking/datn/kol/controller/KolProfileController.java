@@ -56,7 +56,7 @@ public class KolProfileController {
 
     @DeleteMapping("/me/channels/{id}")
     @PreAuthorize("hasRole('KOL')")
-    public ApiResponse<Void> deleteChannel(@PathVariable Long id) {
+    public ApiResponse<Void> deleteChannel(@PathVariable("id") Long id) {
         kolProfileService.deleteChannel(id);
         return ApiResponse.ok("Channel deleted");
     }
@@ -69,7 +69,7 @@ public class KolProfileController {
 
     @DeleteMapping("/me/packages/{id}")
     @PreAuthorize("hasRole('KOL')")
-    public ApiResponse<Void> deletePackage(@PathVariable Long id) {
+    public ApiResponse<Void> deletePackage(@PathVariable("id") Long id) {
         kolProfileService.deletePackage(id);
         return ApiResponse.ok("Package deleted");
     }
@@ -82,13 +82,13 @@ public class KolProfileController {
 
     @DeleteMapping("/me/portfolio/{id}")
     @PreAuthorize("hasRole('KOL')")
-    public ApiResponse<Void> deletePortfolio(@PathVariable Long id) {
+    public ApiResponse<Void> deletePortfolio(@PathVariable("id") Long id) {
         kolProfileService.deletePortfolio(id);
         return ApiResponse.ok("Portfolio item deleted");
     }
 
     @GetMapping("/{slug}")
-    public ApiResponse<KolPublicResponse> getPublic(@PathVariable String slug) {
+    public ApiResponse<KolPublicResponse> getPublic(@PathVariable("slug") String slug) {
         return ApiResponse.ok(kolProfileService.getPublicBySlug(slug));
     }
 }

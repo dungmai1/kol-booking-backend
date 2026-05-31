@@ -28,18 +28,18 @@ public class PaymentController {
 
     @PostMapping("/bookings/{bookingId}/checkout")
     @PreAuthorize("hasRole('BRAND')")
-    public ApiResponse<CheckoutResponse> createCheckout(@PathVariable Long bookingId,
+    public ApiResponse<CheckoutResponse> createCheckout(@PathVariable("bookingId") Long bookingId,
                                                         @RequestBody(required = false) CheckoutRequest request) {
         return ApiResponse.ok(paymentService.createCheckout(bookingId, request));
     }
 
     @GetMapping("/bookings/{bookingId}")
-    public ApiResponse<CheckoutResponse> getStatus(@PathVariable Long bookingId) {
+    public ApiResponse<CheckoutResponse> getStatus(@PathVariable("bookingId") Long bookingId) {
         return ApiResponse.ok(paymentService.getStatus(bookingId));
     }
 
     @PostMapping("/webhook/{provider}")
-    public ApiResponse<Void> webhook(@PathVariable PaymentProvider provider,
+    public ApiResponse<Void> webhook(@PathVariable("provider") PaymentProvider provider,
                                      @Valid @RequestBody WebhookRequest request) {
         paymentService.handleWebhook(provider, request);
         return ApiResponse.ok("Webhook processed");
@@ -50,10 +50,10 @@ public class PaymentController {
      * can trigger a fake PAID webhook during development. Do NOT expose externally.
      */
     @GetMapping("/webhook/{provider}")
-    public ApiResponse<Void> webhookGet(@PathVariable PaymentProvider provider,
-                                        @RequestParam String externalRef,
-                                        @RequestParam BigDecimal amount,
-                                        @RequestParam String status) {
+    public ApiResponse<Void> webhookGet(@PathVariable("provider") PaymentProvider provider,
+                                        @RequestParam(name = "externalRef") String externalRef,
+                                        @RequestParam(name = "amount") BigDecimal amount,
+                                        @RequestParam(name = "status") String status) {
         paymentService.handleWebhook(provider, new WebhookRequest(externalRef, amount, status));
         return ApiResponse.ok("Webhook processed");
     }

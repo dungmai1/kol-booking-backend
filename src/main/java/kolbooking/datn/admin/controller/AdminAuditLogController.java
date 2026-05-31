@@ -22,8 +22,8 @@ public class AdminAuditLogController {
 
     @GetMapping
     public ApiResponse<PageResponse<AdminAuditLog>> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "50") int size) {
         return ApiResponse.ok(PageResponse.of(
                 auditRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size))));
     }

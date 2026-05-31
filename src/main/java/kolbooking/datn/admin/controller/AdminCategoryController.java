@@ -29,13 +29,13 @@ public class AdminCategoryController {
     }
 
     @PutMapping("/{id}")
-    public ApiResponse<CategoryResponse> update(@PathVariable Long id,
+    public ApiResponse<CategoryResponse> update(@PathVariable("id") Long id,
                                                 @Valid @RequestBody CategoryRequest request) {
         return ApiResponse.ok(categoryService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ApiResponse<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable("id") Long id) {
         categoryService.delete(id);
         return ApiResponse.ok("Category deleted");
     }

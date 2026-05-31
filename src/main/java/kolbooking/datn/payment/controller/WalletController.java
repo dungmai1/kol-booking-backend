@@ -34,8 +34,8 @@ public class WalletController {
 
     @GetMapping("/me/transactions")
     public ApiResponse<PageResponse<WalletTransactionResponse>> transactions(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         Wallet wallet = walletService.getOrCreate(SecurityUtils.currentUserId());
         return ApiResponse.ok(PageResponse.of(transactionRepository
                 .findByWalletIdOrderByCreatedAtDesc(wallet.getId(), PageRequest.of(page, size))

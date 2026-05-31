@@ -47,8 +47,8 @@ public class SubscriptionController {
 
     @PostMapping("/{id}/cancel")
     public ApiResponse<SubscriptionResponse> cancel(
-            @PathVariable Long id,
-            @RequestParam(required = false) String reason) {
+            @PathVariable("id") Long id,
+            @RequestParam(name = "reason", required = false) String reason) {
         return ApiResponse.ok(
                 subscriptionService.cancel(SecurityUtils.currentUserId(), id, reason),
                 "Subscription cancelled");

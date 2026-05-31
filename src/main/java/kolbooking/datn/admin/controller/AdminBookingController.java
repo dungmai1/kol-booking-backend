@@ -29,16 +29,16 @@ public class AdminBookingController {
 
     @GetMapping
     public ApiResponse<PageResponse<BookingResponse>> list(
-            @RequestParam(required = false) BookingStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "status", required = false) BookingStatus status,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(PageResponse.of(
                 adminBookingService.list(status, PageRequest.of(page, size))
                         .map(BookingMapper::toDto)));
     }
 
     @PostMapping("/{id}/resolve-dispute")
-    public ApiResponse<BookingResponse> resolveDispute(@PathVariable Long id,
+    public ApiResponse<BookingResponse> resolveDispute(@PathVariable("id") Long id,
                                                        @Valid @RequestBody DisputeResolutionRequest request) {
         return ApiResponse.ok(BookingMapper.toDto(adminBookingService.resolveDispute(id, request)));
     }

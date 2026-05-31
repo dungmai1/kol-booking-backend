@@ -27,22 +27,22 @@ public class ReviewController {
 
     @PostMapping("/bookings/{bookingId}/reviews")
     @PreAuthorize("hasAnyRole('BRAND','KOL')")
-    public ApiResponse<ReviewResponse> create(@PathVariable Long bookingId,
+    public ApiResponse<ReviewResponse> create(@PathVariable("bookingId") Long bookingId,
                                               @Valid @RequestBody ReviewCreateRequest request) {
         return ApiResponse.ok(reviewService.create(bookingId, request));
     }
 
     @PutMapping("/reviews/{reviewId}")
     @PreAuthorize("isAuthenticated()")
-    public ApiResponse<ReviewResponse> update(@PathVariable Long reviewId,
+    public ApiResponse<ReviewResponse> update(@PathVariable("reviewId") Long reviewId,
                                               @Valid @RequestBody ReviewCreateRequest request) {
         return ApiResponse.ok(reviewService.update(reviewId, request));
     }
 
     @GetMapping("/users/{userId}/reviews")
-    public ApiResponse<PageResponse<ReviewResponse>> listForUser(@PathVariable Long userId,
-                                                                 @RequestParam(defaultValue = "0") int page,
-                                                                 @RequestParam(defaultValue = "20") int size) {
+    public ApiResponse<PageResponse<ReviewResponse>> listForUser(@PathVariable("userId") Long userId,
+                                                                 @RequestParam(name = "page", defaultValue = "0") int page,
+                                                                 @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(PageResponse.of(reviewService.listForUser(userId, PageRequest.of(page, size))));
     }
 }

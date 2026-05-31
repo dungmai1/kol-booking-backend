@@ -35,35 +35,35 @@ public class WithdrawController {
     @GetMapping("/me")
     @PreAuthorize("hasRole('KOL')")
     public ApiResponse<PageResponse<WithdrawResponse>> myRequests(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(PageResponse.of(withdrawService.myRequests(PageRequest.of(page, size))));
     }
 
     @GetMapping("/admin")
     @PreAuthorize("hasRole('ADMIN')")
     public ApiResponse<PageResponse<WithdrawResponse>> listForAdmin(
-            @RequestParam(defaultValue = "PENDING") WithdrawStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "status", defaultValue = "PENDING") WithdrawStatus status,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(PageResponse.of(withdrawService.listByStatus(status, PageRequest.of(page, size))));
     }
 
     @PostMapping("/admin/{id}/approve")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<WithdrawResponse> approve(@PathVariable Long id) {
+    public ApiResponse<WithdrawResponse> approve(@PathVariable("id") Long id) {
         return ApiResponse.ok(withdrawService.approve(id));
     }
 
     @PostMapping("/admin/{id}/paid")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<WithdrawResponse> markPaid(@PathVariable Long id) {
+    public ApiResponse<WithdrawResponse> markPaid(@PathVariable("id") Long id) {
         return ApiResponse.ok(withdrawService.markPaid(id));
     }
 
     @PostMapping("/admin/{id}/reject")
     @PreAuthorize("hasRole('ADMIN')")
-    public ApiResponse<WithdrawResponse> reject(@PathVariable Long id,
+    public ApiResponse<WithdrawResponse> reject(@PathVariable("id") Long id,
                                                 @RequestBody(required = false) ReasonRequest request) {
         String reason = request == null ? null : request.reason();
         return ApiResponse.ok(withdrawService.reject(id, reason));

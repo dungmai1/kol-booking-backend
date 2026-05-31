@@ -30,9 +30,9 @@ public class AdminProfileController {
 
     @GetMapping("/kols")
     public ApiResponse<PageResponse<Map<String, Object>>> listKols(
-            @RequestParam(required = false) KolProfileStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "status", required = false) KolProfileStatus status,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(PageResponse.of(adminProfileService
                 .listKolByStatus(status, PageRequest.of(page, size))
                 .map(k -> Map.of(
@@ -49,13 +49,13 @@ public class AdminProfileController {
     }
 
     @PostMapping("/kols/{id}/approve")
-    public ApiResponse<Void> approveKol(@PathVariable Long id) {
+    public ApiResponse<Void> approveKol(@PathVariable("id") Long id) {
         adminProfileService.approveKol(id);
         return ApiResponse.ok("KOL approved");
     }
 
     @PostMapping("/kols/{id}/reject")
-    public ApiResponse<Void> rejectKol(@PathVariable Long id,
+    public ApiResponse<Void> rejectKol(@PathVariable("id") Long id,
                                        @Valid @RequestBody(required = false) RejectReasonRequest request) {
         adminProfileService.rejectKol(id, request == null ? null : request.reason());
         return ApiResponse.ok("KOL rejected");
@@ -63,9 +63,9 @@ public class AdminProfileController {
 
     @GetMapping("/brands")
     public ApiResponse<PageResponse<Map<String, Object>>> listBrands(
-            @RequestParam(required = false) BrandProfileStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "status", required = false) BrandProfileStatus status,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(PageResponse.of(adminProfileService
                 .listBrandByStatus(status, PageRequest.of(page, size))
                 .map(b -> Map.of(
@@ -80,13 +80,13 @@ public class AdminProfileController {
     }
 
     @PostMapping("/brands/{id}/approve")
-    public ApiResponse<Void> approveBrand(@PathVariable Long id) {
+    public ApiResponse<Void> approveBrand(@PathVariable("id") Long id) {
         adminProfileService.approveBrand(id);
         return ApiResponse.ok("Brand approved");
     }
 
     @PostMapping("/brands/{id}/reject")
-    public ApiResponse<Void> rejectBrand(@PathVariable Long id,
+    public ApiResponse<Void> rejectBrand(@PathVariable("id") Long id,
                                          @Valid @RequestBody(required = false) RejectReasonRequest request) {
         adminProfileService.rejectBrand(id, request == null ? null : request.reason());
         return ApiResponse.ok("Brand rejected");

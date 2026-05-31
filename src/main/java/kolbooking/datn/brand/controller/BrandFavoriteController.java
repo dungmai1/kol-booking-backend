@@ -23,21 +23,21 @@ public class BrandFavoriteController {
     private final BrandFavoriteService favoriteService;
 
     @PostMapping("/{kolId}")
-    public ApiResponse<Void> add(@PathVariable Long kolId) {
+    public ApiResponse<Void> add(@PathVariable("kolId") Long kolId) {
         favoriteService.add(kolId);
         return ApiResponse.ok("Added to favorites");
     }
 
     @DeleteMapping("/{kolId}")
-    public ApiResponse<Void> remove(@PathVariable Long kolId) {
+    public ApiResponse<Void> remove(@PathVariable("kolId") Long kolId) {
         favoriteService.remove(kolId);
         return ApiResponse.ok("Removed from favorites");
     }
 
     @GetMapping
     public ApiResponse<PageResponse<KolSummaryResponse>> list(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
     ) {
         return ApiResponse.ok(favoriteService.listMine(page, size));
     }

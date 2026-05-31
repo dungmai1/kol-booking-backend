@@ -30,22 +30,22 @@ public class AdminStatsController {
 
     @GetMapping("/bookings")
     public ApiResponse<List<Map<String, Object>>> bookingsByMonth(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+            @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
         Instant end = to == null ? Instant.now() : to;
         Instant start = from == null ? end.minus(365, ChronoUnit.DAYS) : from;
         return ApiResponse.ok(statsService.bookingsByMonth(start, end));
     }
 
     @GetMapping("/top-kols")
-    public ApiResponse<List<Map<String, Object>>> topKols(@RequestParam(defaultValue = "10") int limit) {
+    public ApiResponse<List<Map<String, Object>>> topKols(@RequestParam(name = "limit", defaultValue = "10") int limit) {
         return ApiResponse.ok(statsService.topKols(limit));
     }
 
     @GetMapping("/revenue")
     public ApiResponse<List<Map<String, Object>>> revenue(
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+            @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
         Instant end = to == null ? Instant.now() : to;
         Instant start = from == null ? end.minus(365, ChronoUnit.DAYS) : from;
         return ApiResponse.ok(statsService.revenueByMonth(start, end));

@@ -36,70 +36,70 @@ public class BookingController {
     @GetMapping("/me")
     @PreAuthorize("hasRole('BRAND')")
     public ApiResponse<PageResponse<BookingResponse>> listMine(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(bookingService.listMineForBrand(page, size));
     }
 
     @GetMapping("/incoming")
     @PreAuthorize("hasRole('KOL')")
     public ApiResponse<PageResponse<BookingResponse>> listIncoming(
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(bookingService.listIncomingForKol(page, size));
     }
 
     @GetMapping("/{id}")
-    public ApiResponse<BookingResponse> get(@PathVariable Long id) {
+    public ApiResponse<BookingResponse> get(@PathVariable("id") Long id) {
         return ApiResponse.ok(bookingService.getBookingForParticipant(id));
     }
 
     @PostMapping("/{id}/cancel")
     @PreAuthorize("hasRole('BRAND')")
-    public ApiResponse<BookingResponse> cancel(@PathVariable Long id, @Valid @RequestBody(required = false) ReasonRequest req) {
+    public ApiResponse<BookingResponse> cancel(@PathVariable("id") Long id, @Valid @RequestBody(required = false) ReasonRequest req) {
         return ApiResponse.ok(bookingService.cancelByBrand(id, req));
     }
 
     @PostMapping("/{id}/accept")
     @PreAuthorize("hasRole('KOL')")
-    public ApiResponse<BookingResponse> accept(@PathVariable Long id) {
+    public ApiResponse<BookingResponse> accept(@PathVariable("id") Long id) {
         return ApiResponse.ok(bookingService.acceptByKol(id));
     }
 
     @PostMapping("/{id}/reject")
     @PreAuthorize("hasRole('KOL')")
-    public ApiResponse<BookingResponse> reject(@PathVariable Long id, @Valid @RequestBody(required = false) ReasonRequest req) {
+    public ApiResponse<BookingResponse> reject(@PathVariable("id") Long id, @Valid @RequestBody(required = false) ReasonRequest req) {
         return ApiResponse.ok(bookingService.rejectByKol(id, req));
     }
 
     @PostMapping("/{id}/deliverables")
     @PreAuthorize("hasRole('KOL')")
-    public ApiResponse<BookingResponse> submitDeliverable(@PathVariable Long id, @Valid @RequestBody SubmitDeliverableRequest req) {
+    public ApiResponse<BookingResponse> submitDeliverable(@PathVariable("id") Long id, @Valid @RequestBody SubmitDeliverableRequest req) {
         return ApiResponse.ok(bookingService.submitDeliverable(id, req));
     }
 
     @PostMapping("/{id}/approve-delivery")
     @PreAuthorize("hasRole('BRAND')")
-    public ApiResponse<BookingResponse> approveDelivery(@PathVariable Long id) {
+    public ApiResponse<BookingResponse> approveDelivery(@PathVariable("id") Long id) {
         return ApiResponse.ok(bookingService.approveDelivery(id));
     }
 
     @PostMapping("/{id}/dispute")
     @PreAuthorize("hasRole('BRAND')")
-    public ApiResponse<BookingResponse> dispute(@PathVariable Long id, @Valid @RequestBody(required = false) ReasonRequest req) {
+    public ApiResponse<BookingResponse> dispute(@PathVariable("id") Long id, @Valid @RequestBody(required = false) ReasonRequest req) {
         return ApiResponse.ok(bookingService.dispute(id, req));
     }
 
     @PostMapping("/{id}/messages")
-    public ApiResponse<BookingMessageResponse> sendMessage(@PathVariable Long id, @Valid @RequestBody BookingMessageRequest req) {
+    public ApiResponse<BookingMessageResponse> sendMessage(@PathVariable("id") Long id, @Valid @RequestBody BookingMessageRequest req) {
         return ApiResponse.ok(bookingService.sendMessage(id, req));
     }
 
     @GetMapping("/{id}/messages")
     public ApiResponse<PageResponse<BookingMessageResponse>> listMessages(
-            @PathVariable Long id,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "50") int size) {
+            @PathVariable("id") Long id,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "50") int size) {
         return ApiResponse.ok(bookingService.listMessages(id, page, size));
     }
 }

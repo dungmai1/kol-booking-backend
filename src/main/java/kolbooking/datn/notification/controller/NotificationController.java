@@ -28,9 +28,9 @@ public class NotificationController {
 
     @GetMapping("/me")
     public ApiResponse<PageResponse<NotificationResponse>> list(
-            @RequestParam(defaultValue = "false") boolean unreadOnly,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(name = "unreadOnly", defaultValue = "false") boolean unreadOnly,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
         return ApiResponse.ok(PageResponse.of(notificationService.list(
                 SecurityUtils.currentUserId(), unreadOnly, PageRequest.of(page, size))));
     }
@@ -42,7 +42,7 @@ public class NotificationController {
     }
 
     @PatchMapping("/{id}/read")
-    public ApiResponse<NotificationResponse> markRead(@PathVariable Long id) {
+    public ApiResponse<NotificationResponse> markRead(@PathVariable("id") Long id) {
         return ApiResponse.ok(notificationService.markAsRead(id));
     }
 

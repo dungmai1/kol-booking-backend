@@ -26,20 +26,20 @@ public class KolSearchController {
 
     @GetMapping("/search")
     public ApiResponse<PageResponse<KolSummaryResponse>> search(
-            @RequestParam(required = false) String q,
-            @RequestParam(required = false) Set<Long> categoryIds,
-            @RequestParam(required = false) Set<Platform> platforms,
-            @RequestParam(required = false) Long minFollower,
-            @RequestParam(required = false) Long maxFollower,
-            @RequestParam(required = false) BigDecimal minPrice,
-            @RequestParam(required = false) BigDecimal maxPrice,
-            @RequestParam(required = false) String city,
-            @RequestParam(required = false) String country,
-            @RequestParam(required = false) Gender gender,
-            @RequestParam(required = false) BigDecimal minRating,
-            @RequestParam(required = false, defaultValue = "featured") String sort,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size
+            @RequestParam(name = "q", required = false) String q,
+            @RequestParam(name = "categoryIds", required = false) Set<Long> categoryIds,
+            @RequestParam(name = "platforms", required = false) Set<Platform> platforms,
+            @RequestParam(name = "minFollower", required = false) Long minFollower,
+            @RequestParam(name = "maxFollower", required = false) Long maxFollower,
+            @RequestParam(name = "minPrice", required = false) BigDecimal minPrice,
+            @RequestParam(name = "maxPrice", required = false) BigDecimal maxPrice,
+            @RequestParam(name = "city", required = false) String city,
+            @RequestParam(name = "country", required = false) String country,
+            @RequestParam(name = "gender", required = false) Gender gender,
+            @RequestParam(name = "minRating", required = false) BigDecimal minRating,
+            @RequestParam(name = "sort", required = false, defaultValue = "featured") String sort,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size
     ) {
         KolSearchFilter filter = new KolSearchFilter(
                 q, categoryIds, platforms, minFollower, maxFollower,
@@ -49,7 +49,7 @@ public class KolSearchController {
 
     @GetMapping("/featured")
     public ApiResponse<List<KolSummaryResponse>> featured(
-            @RequestParam(defaultValue = "10") int limit
+            @RequestParam(name = "limit", defaultValue = "10") int limit
     ) {
         return ApiResponse.ok(kolSearchService.featured(limit));
     }

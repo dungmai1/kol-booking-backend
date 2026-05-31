@@ -21,12 +21,12 @@ public class PlanController {
     private final PlanService planService;
 
     @GetMapping
-    public ApiResponse<List<PlanResponse>> list(@RequestParam(required = false) Role targetRole) {
+    public ApiResponse<List<PlanResponse>> list(@RequestParam(name = "targetRole", required = false) Role targetRole) {
         return ApiResponse.ok(planService.listActive(targetRole));
     }
 
     @GetMapping("/{code}")
-    public ApiResponse<PlanResponse> get(@PathVariable String code) {
+    public ApiResponse<PlanResponse> get(@PathVariable("code") String code) {
         return ApiResponse.ok(planService.getByCode(code));
     }
 }
