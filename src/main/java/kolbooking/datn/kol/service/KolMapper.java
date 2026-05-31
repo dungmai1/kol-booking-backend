@@ -64,7 +64,7 @@ public final class KolMapper {
         List<KolPortfolioItemResponse> portfolio = k.getPortfolio().stream().map(KolMapper::toDto).toList();
         Set<Long> categoryIds = k.getCategories().stream().map(Category::getId).collect(Collectors.toSet());
         return new KolPublicResponse(
-                k.getId(), k.getDisplayName(), k.getSlug(),
+                k.getId(), k.getUserId(), k.getDisplayName(), k.getSlug(),
                 k.getAvatarUrl(), k.getCoverUrl(), k.getBio(),
                 k.getGender(), k.getCity(), k.getCountry(),
                 k.getAvgRating(), k.getReviewCount(), categoryIds,

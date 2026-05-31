@@ -8,6 +8,7 @@ import java.util.Set;
 
 public record KolPublicResponse(
         Long id,
+        Long userId,
         String displayName,
         String slug,
         String avatarUrl,
