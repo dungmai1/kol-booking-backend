@@ -70,6 +70,30 @@ public class KolProfileService {
     }
 
     @Transactional
+    public List<KolSocialChannelResponse> listMyChannels() {
+        Long userId = SecurityUtils.currentUserId();
+        KolProfile profile = kolProfileRepository.findByUserIdWithDetails(userId)
+                .orElseGet(this::getOrCreateForCurrentUser);
+        return profile.getChannels().stream().map(KolMapper::toDto).toList();
+    }
+
+    @Transactional
+    public List<KolPricingPackageResponse> listMyPackages() {
+        Long userId = SecurityUtils.currentUserId();
+        KolProfile profile = kolProfileRepository.findByUserIdWithDetails(userId)
+                .orElseGet(this::getOrCreateForCurrentUser);
+        return profile.getPricingPackages().stream().map(KolMapper::toDto).toList();
+    }
+
+    @Transactional
+    public List<KolPortfolioItemResponse> listMyPortfolio() {
+        Long userId = SecurityUtils.currentUserId();
+        KolProfile profile = kolProfileRepository.findByUserIdWithDetails(userId)
+                .orElseGet(this::getOrCreateForCurrentUser);
+        return profile.getPortfolio().stream().map(KolMapper::toDto).toList();
+    }
+
+    @Transactional
     public KolProfileResponse updateMyProfile(KolProfileUpdateRequest req) {
         KolProfile profile = getOrCreateForCurrentUser();
 
