@@ -51,9 +51,12 @@ public class BrandFavoriteService {
         Page<BrandFavorite> favs = favoriteRepository.findByIdBrandProfileId(
                 brand.getId(), PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         List<Long> kolIds = favs.getContent().stream().map(f -> f.getId().getKolProfileId()).toList();
-        List<KolProfile> kols = kolProfileRepository.findAllById(kolIds);
-        List<KolSummaryResponse> content = kols.stream().map(KolMapper::toSummary).toList();
-        return new PageResponse<>(content, favs.getNumber(), favs.getSize(),
-                favs.getTotalElements(), favs.getTotalPages());
+        // Re-order to match favorite page order (findAllById returns unsorted).
+        java.util.Map<Long, KolProfile> byId = kolProfileRepository.findAllById(kolIds).stream()
+                .collect(java.util.stream.Collectors.toMap(KolProfile::getId, k -> k));
+        return PageResponse.of(favs.map(f -> {
+            KolProfile kol = byId.get(f.getId().getKolProfileId());
+            return KolMapper.toSummary(kol, true);
+        }));
     }
 }

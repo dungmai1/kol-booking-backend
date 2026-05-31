@@ -86,6 +86,9 @@ public class AuthService {
         if (user.getStatus() == UserStatus.BANNED) {
             throw new BusinessException("Account banned", ErrorCode.ACCOUNT_BANNED, HttpStatus.FORBIDDEN);
         }
+        if (user.getStatus() == UserStatus.INACTIVE) {
+            throw new BusinessException("Account is deactivated", ErrorCode.ACCOUNT_INACTIVE, HttpStatus.FORBIDDEN);
+        }
 
         return buildTokens(user);
     }

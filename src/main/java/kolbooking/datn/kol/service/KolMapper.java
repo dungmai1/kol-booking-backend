@@ -55,6 +55,10 @@ public final class KolMapper {
     }
 
     public static KolPublicResponse toPublic(KolProfile k) {
+        return toPublic(k, false);
+    }
+
+    public static KolPublicResponse toPublic(KolProfile k, boolean isFavorite) {
         List<KolSocialChannelResponse> channels = k.getChannels().stream().map(KolMapper::toDto).toList();
         List<KolPricingPackageResponse> packages = k.getPricingPackages().stream().map(KolMapper::toDto).toList();
         List<KolPortfolioItemResponse> portfolio = k.getPortfolio().stream().map(KolMapper::toDto).toList();
@@ -64,20 +68,26 @@ public final class KolMapper {
                 k.getAvatarUrl(), k.getCoverUrl(), k.getBio(),
                 k.getGender(), k.getCity(), k.getCountry(),
                 k.getAvgRating(), k.getReviewCount(), categoryIds,
-                channels, packages, portfolio
+                channels, packages, portfolio, isFavorite
         );
+    }
+
+    public static KolSummaryResponse toSummary(KolProfile k) {
+        return toSummary(k, false);
     }
 
     /**
      * Maps to summary using denormalized {@code maxFollowerCount} / {@code minPrice} fields.
      * Does not touch lazy collections — required to keep /kols/search at O(1) query per page.
+     * {@code isFavorite} is only true when the caller is a BRAND that has favorited this KOL.
      */
-    public static KolSummaryResponse toSummary(KolProfile k) {
+    public static KolSummaryResponse toSummary(KolProfile k, boolean isFavorite) {
         Long maxFollower = k.getMaxFollowerCount() == null ? 0L : k.getMaxFollowerCount();
         return new KolSummaryResponse(
                 k.getId(), k.getDisplayName(), k.getSlug(),
                 k.getAvatarUrl(), k.getCity(), k.getCountry(),
-                k.getAvgRating(), k.getReviewCount(), maxFollower, k.getMinPrice()
+                k.getAvgRating(), k.getReviewCount(), maxFollower, k.getMinPrice(),
+                isFavorite
         );
     }
 }

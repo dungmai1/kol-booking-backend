@@ -21,5 +21,6 @@ public record KolPublicResponse(
         Set<Long> categoryIds,
         List<KolSocialChannelResponse> channels,
         List<KolPricingPackageResponse> pricingPackages,
-        List<KolPortfolioItemResponse> portfolio
+        List<KolPortfolioItemResponse> portfolio,
+        boolean isFavorite
 ) {}

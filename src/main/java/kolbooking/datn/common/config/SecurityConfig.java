@@ -50,7 +50,9 @@ public class SecurityConfig {
                                 "/api/v1/kols/search",
                                 "/api/v1/kols/featured",
                                 "/api/v1/kols/*/reviews",
-                                "/api/v1/users/*/reviews"
+                                "/api/v1/users/*/reviews",
+                                "/api/v1/plans",
+                                "/api/v1/plans/**"
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/kols/{slug:[a-z0-9-]+}")
                                 .permitAll()

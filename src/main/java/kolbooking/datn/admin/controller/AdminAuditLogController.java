@@ -2,10 +2,10 @@ package kolbooking.datn.admin.controller;
 
 import kolbooking.datn.admin.domain.AdminAuditLog;
 import kolbooking.datn.admin.repository.AdminAuditLogRepository;
+import kolbooking.datn.common.dto.ApiResponse;
+import kolbooking.datn.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,9 +21,10 @@ public class AdminAuditLogController {
     private final AdminAuditLogRepository auditRepository;
 
     @GetMapping
-    public ResponseEntity<Page<AdminAuditLog>> list(
+    public ApiResponse<PageResponse<AdminAuditLog>> list(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size) {
-        return ResponseEntity.ok(auditRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size)));
+        return ApiResponse.ok(PageResponse.of(
+                auditRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(page, size))));
     }
 }

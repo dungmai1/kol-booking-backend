@@ -12,5 +12,6 @@ public record KolSummaryResponse(
         BigDecimal avgRating,
         Integer reviewCount,
         Long maxFollowerCount,
-        BigDecimal minPrice
+        BigDecimal minPrice,
+        boolean isFavorite
 ) {}

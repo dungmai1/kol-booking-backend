@@ -4,6 +4,9 @@ import jakarta.transaction.Transactional;
 import kolbooking.datn.auth.domain.AppUser;
 import kolbooking.datn.auth.domain.Role;
 import kolbooking.datn.auth.repository.AppUserRepository;
+import kolbooking.datn.brand.domain.BrandProfile;
+import kolbooking.datn.brand.repository.BrandFavoriteRepository;
+import kolbooking.datn.brand.repository.BrandProfileRepository;
 import kolbooking.datn.common.domain.Category;
 import kolbooking.datn.common.exception.BusinessException;
 import kolbooking.datn.common.exception.ErrorCode;
@@ -49,6 +52,8 @@ public class KolProfileService {
     private final KolPortfolioItemRepository portfolioRepository;
     private final CategoryRepository categoryRepository;
     private final AppUserRepository userRepository;
+    private final BrandProfileRepository brandProfileRepository;
+    private final BrandFavoriteRepository brandFavoriteRepository;
 
     @Transactional
     public KolProfileResponse getMyProfile() {
@@ -248,7 +253,19 @@ public class KolProfileService {
         KolProfile profile = kolProfileRepository.findBySlugWithDetails(slug)
                 .filter(p -> p.getStatus() == KolProfileStatus.APPROVED)
                 .orElseThrow(() -> new ResourceNotFoundException("KOL not found"));
-        return KolMapper.toPublic(profile);
+        return KolMapper.toPublic(profile, isFavoritedByCurrentBrand(profile.getId()));
+    }
+
+    /**
+     * True only when the caller is an authenticated BRAND with a matching favorite row.
+     * Anonymous, KOL, and ADMIN callers get false with no extra query.
+     */
+    private boolean isFavoritedByCurrentBrand(Long kolProfileId) {
+        Long userId = SecurityUtils.currentUserIdSafe();
+        if (userId == null || SecurityUtils.currentRole() != Role.BRAND) return false;
+        BrandProfile brand = brandProfileRepository.findByUserId(userId).orElse(null);
+        if (brand == null) return false;
+        return brandFavoriteRepository.existsByIdBrandProfileIdAndIdKolProfileId(brand.getId(), kolProfileId);
     }
 
     public KolProfile requireApprovedById(Long id) {

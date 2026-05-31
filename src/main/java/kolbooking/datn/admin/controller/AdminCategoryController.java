@@ -1,11 +1,11 @@
 package kolbooking.datn.admin.controller;
 
 import jakarta.validation.Valid;
+import kolbooking.datn.common.dto.ApiResponse;
 import kolbooking.datn.common.dto.CategoryRequest;
 import kolbooking.datn.common.dto.CategoryResponse;
 import kolbooking.datn.common.service.CategoryService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -24,19 +24,19 @@ public class AdminCategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    public ResponseEntity<CategoryResponse> create(@Valid @RequestBody CategoryRequest request) {
-        return ResponseEntity.ok(categoryService.create(request));
+    public ApiResponse<CategoryResponse> create(@Valid @RequestBody CategoryRequest request) {
+        return ApiResponse.ok(categoryService.create(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CategoryResponse> update(@PathVariable Long id,
-                                                   @Valid @RequestBody CategoryRequest request) {
-        return ResponseEntity.ok(categoryService.update(id, request));
+    public ApiResponse<CategoryResponse> update(@PathVariable Long id,
+                                                @Valid @RequestBody CategoryRequest request) {
+        return ApiResponse.ok(categoryService.update(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ApiResponse<Void> delete(@PathVariable Long id) {
         categoryService.delete(id);
-        return ResponseEntity.noContent().build();
+        return ApiResponse.ok("Category deleted");
     }
 }
