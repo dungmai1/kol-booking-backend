@@ -37,7 +37,7 @@ public class KolSearchService {
         if (size > 100) size = 100;
         if (page < 0) page = 0;
 
-        Sort sort = resolveSort(filter.sort());
+        Sort sort = KolSortResolver.resolve(filter.sort());
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<KolProfile> result = kolProfileRepository.findAll(KolSpecification.matches(filter), pageable);
@@ -69,16 +69,4 @@ public class KolSearchService {
         return new HashSet<>(brandFavoriteRepository.findFavoritedKolIds(brand.getId(), kolIds));
     }
 
-    private Sort resolveSort(String key) {
-        if (key == null) return Sort.by(Sort.Direction.DESC, "avgRating", "reviewCount");
-        return switch (key) {
-            case "price_asc" -> Sort.by(Sort.Direction.ASC, "minPrice");
-            case "price_desc" -> Sort.by(Sort.Direction.DESC, "minPrice");
-            case "follower_desc" -> Sort.by(Sort.Direction.DESC, "maxFollowerCount");
-            case "rating_desc" -> Sort.by(Sort.Direction.DESC, "avgRating");
-            case "newest" -> Sort.by(Sort.Direction.DESC, "createdAt");
-            case "featured" -> Sort.by(Sort.Direction.DESC, "avgRating", "reviewCount");
-            default -> Sort.by(Sort.Direction.DESC, "avgRating", "reviewCount");
-        };
-    }
 }

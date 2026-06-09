@@ -12,6 +12,7 @@ import kolbooking.datn.kol.dto.KolPublicResponse;
 import kolbooking.datn.kol.dto.KolSocialChannelResponse;
 import kolbooking.datn.kol.dto.KolSummaryResponse;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -66,7 +67,7 @@ public final class KolMapper {
         return new KolPublicResponse(
                 k.getId(), k.getUserId(), k.getDisplayName(), k.getSlug(),
                 k.getAvatarUrl(), k.getCoverUrl(), k.getBio(),
-                k.getGender(), k.getCity(), k.getCountry(),
+                k.getGender(), k.getCity(), k.getCountry(), k.getStatus(),
                 k.getAvgRating(), k.getReviewCount(), categoryIds,
                 channels, packages, portfolio, isFavorite
         );
@@ -83,10 +84,12 @@ public final class KolMapper {
      */
     public static KolSummaryResponse toSummary(KolProfile k, boolean isFavorite) {
         Long maxFollower = k.getMaxFollowerCount() == null ? 0L : k.getMaxFollowerCount();
+        // null minPrice → 0 so FE can treat minPrice <= 0 as "Liên hệ" / contact for quote
+        BigDecimal minPrice = k.getMinPrice() == null ? BigDecimal.ZERO : k.getMinPrice();
         return new KolSummaryResponse(
                 k.getId(), k.getDisplayName(), k.getSlug(),
                 k.getAvatarUrl(), k.getCity(), k.getCountry(),
-                k.getAvgRating(), k.getReviewCount(), maxFollower, k.getMinPrice(),
+                k.getAvgRating(), k.getReviewCount(), maxFollower, minPrice,
                 isFavorite
         );
     }

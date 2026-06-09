@@ -21,6 +21,7 @@ import kolbooking.datn.auth.repository.RefreshTokenRepository;
 import kolbooking.datn.auth.repository.VerificationTokenRepository;
 import kolbooking.datn.common.exception.BusinessException;
 import kolbooking.datn.common.exception.ErrorCode;
+import kolbooking.datn.kol.service.KolProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -42,6 +43,7 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final EmailService emailService;
+    private final KolProfileService kolProfileService;
 
     @Value("${app.verification.email-token-ttl-hours}")
     private long emailTokenTtlHours;
@@ -66,6 +68,10 @@ public class AuthService {
                 .emailVerified(false)
                 .build();
         user = userRepository.save(user);
+
+        if (req.role() == Role.KOL) {
+            kolProfileService.createInitialProfileForUser(user);
+        }
 
         VerificationToken token = createVerificationToken(user.getId(), TokenPurpose.EMAIL_VERIFICATION, emailTokenTtlHours);
         emailService.sendEmailVerification(user.getEmail(), token.getToken());

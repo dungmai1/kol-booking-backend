@@ -12,6 +12,7 @@ import kolbooking.datn.common.exception.ResourceNotFoundException;
 import kolbooking.datn.kol.domain.KolProfile;
 import kolbooking.datn.kol.domain.KolProfileStatus;
 import kolbooking.datn.kol.repository.KolProfileRepository;
+import kolbooking.datn.kol.service.KolProfileService;
 import kolbooking.datn.notification.domain.NotificationType;
 import kolbooking.datn.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class AdminProfileService {
     private final NotificationService notificationService;
     private final EmailService emailService;
     private final AuditService auditService;
+    private final KolProfileService kolProfileService;
 
     @Transactional(readOnly = true)
     public Page<KolProfile> listKolByStatus(KolProfileStatus status, Pageable pageable) {
@@ -49,6 +51,7 @@ public class AdminProfileService {
             throw new BusinessException("KOL is not pending review",
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
+        kolProfileService.recomputeAggregates(k);
         k.setStatus(KolProfileStatus.APPROVED);
         k.setRejectReason(null);
         kolProfileRepository.save(k);

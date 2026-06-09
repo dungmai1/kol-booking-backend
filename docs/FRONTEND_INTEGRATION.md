@@ -125,6 +125,9 @@ Tất cả các endpoint `/auth/**` đều **không yêu cầu xác thực**.
 
 **Response:** `AuthTokens` (giống register)
 
+> **KOL register:** Backend tạo sẵn `kol_profile` (status `DRAFT`, slug `kol-{userId}`, displayName = phần trước `@` của email).  
+> Gọi `GET /kols/me` ngay sau register sẽ trả profile — không cần lazy-create.
+
 ---
 
 ### POST `/auth/refresh`
@@ -182,6 +185,17 @@ Làm mới access token.
 ## 3. KOL Profile
 
 > Yêu cầu role `KOL` (trừ endpoint public).
+
+### Lifecycle trạng thái
+
+| Status | Ý nghĩa |
+|--------|---------|
+| `DRAFT` | Mới tạo / đang chỉnh sửa (sau register hoặc bị reject) |
+| `PENDING_REVIEW` | Đã nộp, chờ Admin duyệt |
+| `APPROVED` | Hiển thị công khai trên search & `/kols/{slug}` |
+| `REJECTED` | Bị từ chối — chỉnh sửa rồi nộp lại |
+
+Flow: `DRAFT` → `PENDING_REVIEW` → `APPROVED` (hoặc `REJECTED` → sửa → `DRAFT` → …)
 
 ### GET `/kols/me` — Lấy profile của KOL đang đăng nhập
 
@@ -242,13 +256,18 @@ Làm mới access token.
 
 Không cần request body.
 
-**Response:** `KolProfileResponse` (status → `SUBMITTED`)
+**Response:** `KolProfileResponse` (status → `PENDING_REVIEW`)
 
 ---
 
-### GET `/kols/{slug}` — Xem profile KOL công khai *(public)*
+### GET `/kols/{slug}` — Xem profile KOL *(public hoặc owner preview)*
 
-**Response:** `KolPublicResponse` (tương tự `KolProfileResponse`)
+- **Anonymous / Brand / KOL khác:** chỉ trả KOL có `status = APPROVED`; không tìm thấy → **404**.
+- **Owner (KOL sở hữu slug):** trả profile dù chưa `APPROVED` (preview dashboard). Response có field `status` để FE biết chưa public.
+
+**Response:** `KolPublicResponse` (gồm `status`, channels, packages, portfolio, …)
+
+> Owner cũng có thể dùng `GET /kols/me` để quản lý profile đầy đủ (kể cả `rejectReason`).
 
 ---
 
@@ -361,9 +380,24 @@ Không cần request body.
 | `country` | string | Quốc gia |
 | `gender` | string | `MALE` \| `FEMALE` \| `OTHER` |
 | `minRating` | BigDecimal | Rating tối thiểu |
-| `sort` | string | `featured` (default) \| `rating` \| `price_asc` \| `price_desc` \| `followers` |
+| `sort` | string | Xem bảng sort bên dưới |
 | `page` | int | Trang (default 0) |
 | `size` | int | Số phần tử/trang (default 20) |
+
+**Giá trị `sort` được hỗ trợ** (frontend alias và legacy đều OK):
+
+| Gửi lên | Sort thực tế |
+|---------|----------------|
+| `featured` (default) | rating DESC, reviewCount DESC |
+| `followers` | maxFollowerCount DESC |
+| `follower_desc` | maxFollowerCount DESC (legacy) |
+| `rating` | avgRating DESC |
+| `rating_desc` | avgRating DESC (legacy) |
+| `price_asc` | minPrice ASC |
+| `price_desc` | minPrice DESC |
+| `newest` | createdAt DESC |
+
+> `minPrice` trong response: `0` hoặc thiếu nghĩa là **"Liên hệ"** (KOL chưa có gói giá). Giá > 0 là giá thấp nhất trong pricing packages.
 
 **Response:** `PageResponse<KolSummaryResponse>`
 ```json
@@ -380,6 +414,8 @@ Không cần request body.
   "minPrice": 1000000
 }
 ```
+
+> `minPrice: 0` → hiển thị "Liên hệ" trên FE.
 
 ---
 

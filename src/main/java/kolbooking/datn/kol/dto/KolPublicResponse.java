@@ -1,6 +1,7 @@
 package kolbooking.datn.kol.dto;
 
 import kolbooking.datn.kol.domain.Gender;
+import kolbooking.datn.kol.domain.KolProfileStatus;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -17,6 +18,7 @@ public record KolPublicResponse(
         Gender gender,
         String city,
         String country,
+        KolProfileStatus status,
         BigDecimal avgRating,
         Integer reviewCount,
         Set<Long> categoryIds,
