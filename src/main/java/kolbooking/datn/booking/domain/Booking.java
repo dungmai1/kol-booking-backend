@@ -51,6 +51,18 @@ public class Booking {
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal budget;
 
+    /** Commission rate (%) snapshotted at creation; used at settlement so it is immune to later config changes. */
+    @Column(name = "platform_fee_percent", nullable = false, precision = 5, scale = 2)
+    private BigDecimal platformFeePercent;
+
+    /** Commission amount credited to the platform on completion (filled at settlement). */
+    @Column(name = "platform_fee_amount", precision = 15, scale = 2)
+    private BigDecimal platformFeeAmount;
+
+    /** Net amount credited to the KOL on completion (filled at settlement). */
+    @Column(name = "kol_net_amount", precision = 15, scale = 2)
+    private BigDecimal kolNetAmount;
+
     @Column(name = "start_date")
     private LocalDate startDate;
 
@@ -82,6 +94,7 @@ public class Booking {
         if (createdAt == null) createdAt = now;
         if (updatedAt == null) updatedAt = now;
         if (status == null) status = BookingStatus.PENDING;
+        if (platformFeePercent == null) platformFeePercent = BigDecimal.TEN;
     }
 
     @PreUpdate

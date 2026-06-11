@@ -47,7 +47,10 @@ Package gốc: `kolbooking.datn`. Khi thêm module mới (controller, service, e
 - `kolbooking.datn.kol` — quản lý KOL
 - `kolbooking.datn.brand` — quản lý Brand
 - `kolbooking.datn.booking` — đơn booking
-- `kolbooking.datn.auth` — xác thực, user/role
+- `kolbooking.datn.product` — sản phẩm/đăng tin của Brand + ứng tuyển của KOL (top-5, duyệt → tạo booking)
+- `kolbooking.datn.payment` — ví, thanh toán (VNPay + mock có chữ ký), hoa hồng nền tảng, rút tiền
+- `kolbooking.datn.auth` — xác thực, user/role, email
+- `kolbooking.datn.notification` — thông báo in-app + email
 - `kolbooking.datn.common` — shared utilities, exception, config
 
 ## Chạy dự án (dev)
@@ -80,6 +83,20 @@ Trên Windows dùng `gradlew.bat` thay cho `./gradlew`. Tham khảo `.env.exampl
 - Controller trả về DTO, không expose entity trực tiếp.
 - Validate input bằng `jakarta.validation` annotations ở DTO.
 - Xử lý exception tập trung qua `@RestControllerAdvice`.
+
+## Xác thực email (bắt buộc)
+
+- Đăng ký vẫn trả token, nhưng tài khoản `PENDING_VERIFICATION` bị **khoá tính năng** bởi `EmailVerificationInterceptor` (fail-closed): mọi endpoint nghiệp vụ trả `403 EMAIL_NOT_VERIFIED`, chỉ cho phép `/api/v1/auth/**`, `/api/v1/users/me`, các endpoint đọc công khai (catalog KOL/category/plan/product) và callback thanh toán.
+- Link xác nhận trong email gọi `GET /api/v1/auth/verify-email?token=...` (trả trang HTML). Có thêm `POST /api/v1/auth/resend-verification`.
+- `EmailService` gửi HTML qua `JavaMailSender` ở prod (`spring.mail.*`); ở dev (`app.mail.dev-mode=true`) chỉ log link.
+
+## Thanh toán & hoa hồng
+
+- Hoa hồng nền tảng (`app.platform.fee-percent`, mặc định 10%) được **snapshot vào từng booking** lúc tạo (`booking.platform_fee_percent`); khi booking `COMPLETED`, tiền được giải ngân: KOL nhận net, ví nền tảng (tài khoản hệ thống `user_id=0`, role `SYSTEM`) nhận phí. Admin xem ở `GET /api/v1/admin/stats/commission`.
+- Cổng VNPay (`app.payment.vnpay.*`): URL ký HMAC-SHA512, verify chữ ký ở IPN `GET /api/v1/payments/vnpay/ipn` (authoritative) và Return `GET /api/v1/payments/vnpay/return`. Provider `MOCK` (dev) dùng webhook ký HMAC-SHA256 (`app.payment.mock.secret`) — **webhook luôn yêu cầu chữ ký hợp lệ**.
+
+### Biến môi trường bổ sung (prod)
+`APP_FRONTEND_URL`, `VNPAY_TMN_CODE`, `VNPAY_HASH_SECRET`, `VNPAY_PAY_URL`, `VNPAY_RETURN_URL`, `PAYMENT_MOCK_SECRET`, `SPRING_MAIL_HOST/PORT/USERNAME/PASSWORD`.
 
 ## Ghi chú
 

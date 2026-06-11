@@ -53,8 +53,9 @@ public class AuthService {
 
     @Transactional
     public AuthTokens register(RegisterRequest req) {
-        if (req.role() == Role.ADMIN) {
-            throw new BusinessException("Cannot self-register as ADMIN", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
+        if (req.role() != Role.BRAND && req.role() != Role.KOL) {
+            throw new BusinessException("Only BRAND or KOL can self-register",
+                    ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
         }
         if (userRepository.existsByEmail(req.email())) {
             throw new BusinessException("Email already registered", ErrorCode.EMAIL_ALREADY_EXISTS, HttpStatus.CONFLICT);
@@ -141,6 +142,21 @@ public class AuthService {
             user.setStatus(UserStatus.ACTIVE);
         }
         userRepository.save(user);
+    }
+
+    @Transactional
+    public void resendVerification(String email) {
+        // Do not reveal whether the email exists or its verification state.
+        userRepository.findByEmail(email).ifPresent(user -> {
+            if (user.isEmailVerified()) {
+                return;
+            }
+            verificationTokenRepository.invalidateActiveForUser(user.getId(), TokenPurpose.EMAIL_VERIFICATION);
+            VerificationToken token = createVerificationToken(
+                    user.getId(), TokenPurpose.EMAIL_VERIFICATION, emailTokenTtlHours);
+            emailService.sendEmailVerification(user.getEmail(), token.getToken());
+            log.info("Resent verification email to userId={}", user.getId());
+        });
     }
 
     @Transactional

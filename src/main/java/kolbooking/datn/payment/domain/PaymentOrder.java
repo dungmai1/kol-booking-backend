@@ -54,6 +54,14 @@ public class PaymentOrder {
     @Column(name = "external_ref", length = 150, unique = true)
     private String externalRef;
 
+    /** Gateway-side transaction id (e.g. VNPay vnp_TransactionNo), set on a confirmed callback. */
+    @Column(name = "provider_txn_ref", length = 100)
+    private String providerTxnRef;
+
+    /** Raw callback payload kept for audit/dispute resolution. */
+    @Column(name = "raw_callback", columnDefinition = "text")
+    private String rawCallback;
+
     @Column(name = "paid_at")
     private Instant paidAt;
 

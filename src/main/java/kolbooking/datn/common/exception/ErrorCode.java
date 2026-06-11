@@ -17,4 +17,8 @@ public final class ErrorCode {
     public static final String TOKEN_INVALID        = "TOKEN_INVALID";
     public static final String TOKEN_EXPIRED        = "TOKEN_EXPIRED";
     public static final String TOKEN_USED           = "TOKEN_USED";
+    public static final String EMAIL_NOT_VERIFIED   = "EMAIL_NOT_VERIFIED";
+
+    public static final String PAYMENT_ERROR        = "PAYMENT_ERROR";
+    public static final String SIGNATURE_INVALID    = "SIGNATURE_INVALID";
 }
