@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import kolbooking.datn.auth.domain.Role;
 import kolbooking.datn.auth.repository.AppUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,9 @@ public class AdminStatsService {
 
     private final AppUserRepository userRepository;
     private final EntityManager em;
+
+    @Value("${app.platform.fee-percent:10}")
+    private BigDecimal defaultFeePercent;
 
     @Transactional(readOnly = true)
     public Map<String, Object> overview() {
@@ -84,6 +88,33 @@ public class AdminStatsService {
             m.put("bookings", ((Number) r[2]).longValue());
             return m;
         }).toList();
+    }
+
+    /** Commission overview for the admin: current rate, accumulated platform fees, platform wallet. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> commissionSummary() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("defaultFeePercent", defaultFeePercent);
+
+        Number wallet = (Number) em.createNativeQuery(
+                "SELECT COALESCE((SELECT balance_available FROM wallet WHERE user_id = 0), 0)")
+                .getSingleResult();
+        out.put("platformWalletAvailable", toBigDecimal(wallet));
+
+        Number totalFees = (Number) em.createNativeQuery(
+                "SELECT COALESCE(SUM(amount), 0) FROM wallet_transaction WHERE type = 'FEE'")
+                .getSingleResult();
+        out.put("totalCommission", toBigDecimal(totalFees));
+
+        Number feeCount = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM wallet_transaction WHERE type = 'FEE'")
+                .getSingleResult();
+        out.put("commissionTransactions", feeCount.longValue());
+        return out;
+    }
+
+    private static BigDecimal toBigDecimal(Number n) {
+        return n == null ? BigDecimal.ZERO : new BigDecimal(n.toString());
     }
 
     @Transactional(readOnly = true)

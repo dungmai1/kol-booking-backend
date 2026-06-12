@@ -31,12 +31,16 @@ import kolbooking.datn.kol.domain.KolProfile;
 import kolbooking.datn.kol.service.KolProfileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
 
 @Slf4j
 @Service
@@ -50,6 +54,9 @@ public class BookingService {
     private final KolProfileService kolProfileService;
     private final BrandProfileService brandProfileService;
     private final ApplicationEventPublisher eventPublisher;
+
+    @Value("${app.platform.fee-percent:10}")
+    private BigDecimal platformFeePercent;
 
     @Transactional
     public BookingResponse createBooking(CreateBookingRequest req) {
@@ -67,6 +74,7 @@ public class BookingService {
                 .campaignBrief(req.campaignBrief())
                 .deliverables(req.deliverables())
                 .budget(req.budget())
+                .platformFeePercent(platformFeePercent)
                 .startDate(req.startDate())
                 .endDate(req.endDate())
                 .status(BookingStatus.PENDING)
@@ -79,6 +87,46 @@ public class BookingService {
         log.info("Booking created: bookingId={}, brand={}, kol={}, budget={}",
                 b.getId(), brand.getId(), kol.getId(), b.getBudget());
         return BookingMapper.toDto(b);
+    }
+
+    /**
+     * Creates a PENDING booking from an accepted product application. The acting brand owns
+     * {@code brandProfileId}; ownership/role is validated by the caller. Returns the persisted
+     * entity so the caller can link it back to the application.
+     */
+    @Transactional
+    public Booking createBookingFromApplication(Long brandProfileId, Long kolProfileId,
+                                                String campaignTitle, String campaignBrief,
+                                                String deliverables, BigDecimal budget,
+                                                LocalDate startDate, LocalDate endDate) {
+        Booking b = Booking.builder()
+                .brandProfileId(brandProfileId)
+                .kolProfileId(kolProfileId)
+                .campaignTitle(campaignTitle)
+                .campaignBrief(campaignBrief)
+                .deliverables(deliverables)
+                .budget(budget)
+                .platformFeePercent(platformFeePercent)
+                .startDate(startDate)
+                .endDate(endDate)
+                .status(BookingStatus.PENDING)
+                .build();
+        b = bookingRepository.save(b);
+
+        Long actor = SecurityUtils.currentUserIdSafe();
+        recordHistory(b.getId(), null, BookingStatus.PENDING, actor, "Created from product application");
+        eventPublisher.publishEvent(new BookingStatusChangedEvent(b.getId(), null, BookingStatus.PENDING, actor));
+        log.info("Booking created from application: bookingId={}, brand={}, kol={}, budget={}",
+                b.getId(), brandProfileId, kolProfileId, budget);
+        return b;
+    }
+
+    /** Persists the settlement breakdown computed at completion onto the booking. */
+    @Transactional
+    public void recordSettlement(Booking booking, BigDecimal feeAmount, BigDecimal netAmount) {
+        booking.setPlatformFeeAmount(feeAmount);
+        booking.setKolNetAmount(netAmount);
+        bookingRepository.save(booking);
     }
 
     @Transactional
