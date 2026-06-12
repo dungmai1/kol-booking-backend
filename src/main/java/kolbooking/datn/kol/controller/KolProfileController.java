@@ -107,8 +107,8 @@ public class KolProfileController {
         return ApiResponse.ok("Portfolio item deleted");
     }
 
-    @GetMapping("/{slug}")
-    public ApiResponse<KolPublicResponse> getPublic(@PathVariable("slug") String slug) {
-        return ApiResponse.ok(kolProfileService.getPublicBySlug(slug));
+    @GetMapping("/{identifier}")
+    public ApiResponse<KolPublicResponse> getPublic(@PathVariable("identifier") String identifier) {
+        return ApiResponse.ok(kolProfileService.getPublic(identifier));
     }
 }

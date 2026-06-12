@@ -39,6 +39,7 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
@@ -272,12 +273,23 @@ public class KolProfileService {
     }
 
     @Transactional
-    public KolPublicResponse getPublicBySlug(String slug) {
+    public KolPublicResponse getPublic(String identifier) {
         // Single JOIN FETCH avoids 4 lazy roundtrips per detail page view.
-        KolProfile profile = kolProfileRepository.findBySlugWithDetails(slug)
+        KolProfile profile = findPublicProfile(identifier)
                 .filter(p -> p.getStatus() == KolProfileStatus.APPROVED)
                 .orElseThrow(() -> new ResourceNotFoundException("KOL not found"));
         return KolMapper.toPublic(profile, isFavoritedByCurrentBrand(profile.getId()));
+    }
+
+    private Optional<KolProfile> findPublicProfile(String identifier) {
+        if (identifier != null && identifier.chars().allMatch(Character::isDigit)) {
+            try {
+                return kolProfileRepository.findByIdWithDetails(Long.parseLong(identifier));
+            } catch (NumberFormatException ignored) {
+                return Optional.empty();
+            }
+        }
+        return kolProfileRepository.findBySlugWithDetails(identifier);
     }
 
     /**

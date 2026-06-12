@@ -237,6 +237,7 @@ public class KolSearchService {
 
         return new KolCandidateResponse(
                 kol.getId(),
+                kol.getSlug(),
                 kol.getDisplayName(),
                 kol.getAvatarUrl(),
                 kol.getBio(),

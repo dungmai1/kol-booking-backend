@@ -4,6 +4,7 @@ import java.util.List;
 
 public record KolCandidateResponse(
         Long kolId,
+        String slug,
         String displayName,
         String avatarUrl,
         String bio,
