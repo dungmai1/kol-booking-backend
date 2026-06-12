@@ -16,8 +16,17 @@
 - Chỉ trả về KOL `status = APPROVED`.
 
 ### 4.2. Sắp xếp
-- Mặc định: `featured` (thuật toán tự định nghĩa: kết hợp rating + followers + độ khớp category).
-- Tuỳ chọn: `price_asc`, `price_desc`, `follower_desc`, `rating_desc`, `newest`.
+- Mặc định: `featured` (rating DESC + reviewCount DESC).
+- Frontend alias (ưu tiên dùng trên FE):
+  - `followers` → sort theo `maxFollowerCount` DESC
+  - `rating` → sort theo `avgRating` DESC
+  - `featured`, `price_asc`, `price_desc`, `newest` — giữ nguyên tên
+- Legacy (vẫn hỗ trợ): `follower_desc`, `rating_desc`, `price_asc`, `price_desc`, `newest`, `featured`.
+
+### 4.2.1. minPrice trong search
+- Cột denormalized `kol_profile.min_price` = MIN(price) từ `kol_pricing_package`.
+- Response map `null` → `0`; FE coi `minPrice <= 0` là "Liên hệ".
+- Backfill: migration `V19`, `V25`.
 
 ### 4.3. Pagination
 - Dùng `Pageable` của Spring Data.
@@ -55,9 +64,16 @@ GET /api/v1/kols/search
     &minFollower=10000&maxFollower=500000
     &minPrice=1000000&maxPrice=20000000
     &city=Hanoi
-    &sort=rating_desc
+    &sort=rating
     &page=0&size=20
 ```
+
+> Alias `rating` tương đương `rating_desc`. Alias `followers` tương đương `follower_desc`.
+
+### 4.2.2. KOL profile lifecycle (liên quan search)
+- Chỉ KOL `APPROVED` xuất hiện trong `/kols/search` và `/kols/featured`.
+- Register role KOL → tạo profile `DRAFT` (slug `kol-{userId}`).
+- Public `/kols/{slug}`: anonymous chỉ thấy `APPROVED`; owner KOL xem preview profile của mình (response có `status`).
 
 ### 4.6. Caching (tuỳ chọn)
 - Endpoint `featured` cache bằng `@Cacheable` (Caffeine) — refresh mỗi 5 phút.

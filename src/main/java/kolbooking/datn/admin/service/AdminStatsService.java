@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import kolbooking.datn.auth.domain.Role;
 import kolbooking.datn.auth.repository.AppUserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,9 @@ public class AdminStatsService {
 
     private final AppUserRepository userRepository;
     private final EntityManager em;
+
+    @Value("${app.platform.fee-percent:10}")
+    private BigDecimal defaultFeePercent;
 
     @Transactional(readOnly = true)
     public Map<String, Object> overview() {
@@ -42,6 +46,12 @@ public class AdminStatsService {
                 .getSingleResult();
         out.put("platformRevenue", platformRevenue == null
                 ? BigDecimal.ZERO : new BigDecimal(platformRevenue.toString()));
+
+        // Bookings currently in flight (accepted / running / delivered / disputed — not yet settled).
+        Number activeBookings = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM booking WHERE status IN " +
+                "('ACCEPTED','IN_PROGRESS','DELIVERED','DISPUTED')").getSingleResult();
+        out.put("activeBookings", activeBookings.longValue());
 
         return out;
     }
@@ -72,9 +82,12 @@ public class AdminStatsService {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> topKols(int limit) {
         List<Object[]> rows = em.createNativeQuery(
-                "SELECT b.kol_profile_id, COALESCE(SUM(b.budget), 0) AS revenue, COUNT(*) AS bookings " +
-                "FROM booking b WHERE b.status = 'COMPLETED' " +
-                "GROUP BY b.kol_profile_id ORDER BY revenue DESC LIMIT :limit")
+                "SELECT b.kol_profile_id, COALESCE(SUM(b.budget), 0) AS revenue, COUNT(*) AS bookings, " +
+                "       kp.display_name, kp.avg_rating " +
+                "FROM booking b JOIN kol_profile kp ON kp.id = b.kol_profile_id " +
+                "WHERE b.status = 'COMPLETED' " +
+                "GROUP BY b.kol_profile_id, kp.display_name, kp.avg_rating " +
+                "ORDER BY revenue DESC LIMIT :limit")
                 .setParameter("limit", limit)
                 .getResultList();
         return rows.stream().map(r -> {
@@ -82,8 +95,37 @@ public class AdminStatsService {
             m.put("kolProfileId", ((Number) r[0]).longValue());
             m.put("revenue", r[1]);
             m.put("bookings", ((Number) r[2]).longValue());
+            m.put("displayName", r[3]);
+            m.put("avgRating", r[4]);
             return m;
         }).toList();
+    }
+
+    /** Commission overview for the admin: current rate, accumulated platform fees, platform wallet. */
+    @Transactional(readOnly = true)
+    public Map<String, Object> commissionSummary() {
+        Map<String, Object> out = new LinkedHashMap<>();
+        out.put("defaultFeePercent", defaultFeePercent);
+
+        Number wallet = (Number) em.createNativeQuery(
+                "SELECT COALESCE((SELECT balance_available FROM wallet WHERE user_id = 0), 0)")
+                .getSingleResult();
+        out.put("platformWalletAvailable", toBigDecimal(wallet));
+
+        Number totalFees = (Number) em.createNativeQuery(
+                "SELECT COALESCE(SUM(amount), 0) FROM wallet_transaction WHERE type = 'FEE'")
+                .getSingleResult();
+        out.put("totalCommission", toBigDecimal(totalFees));
+
+        Number feeCount = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM wallet_transaction WHERE type = 'FEE'")
+                .getSingleResult();
+        out.put("commissionTransactions", feeCount.longValue());
+        return out;
+    }
+
+    private static BigDecimal toBigDecimal(Number n) {
+        return n == null ? BigDecimal.ZERO : new BigDecimal(n.toString());
     }
 
     @Transactional(readOnly = true)

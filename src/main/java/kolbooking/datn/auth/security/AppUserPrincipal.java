@@ -19,6 +19,7 @@ public class AppUserPrincipal implements UserDetails {
     private final String passwordHash;
     private final Role role;
     private final UserStatus status;
+    private final boolean emailVerified;
 
     public AppUserPrincipal(AppUser user) {
         this.userId = user.getId();
@@ -26,10 +27,16 @@ public class AppUserPrincipal implements UserDetails {
         this.passwordHash = user.getPasswordHash();
         this.role = user.getRole();
         this.status = user.getStatus();
+        this.emailVerified = user.isEmailVerified();
     }
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
+        if (emailVerified) {
+            return List.of(
+                    new SimpleGrantedAuthority("ROLE_" + role.name()),
+                    new SimpleGrantedAuthority("EMAIL_VERIFIED"));
+        }
         return List.of(new SimpleGrantedAuthority("ROLE_" + role.name()));
     }
 

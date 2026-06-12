@@ -1,0 +1,22 @@
+package kolbooking.datn.product.dto;
+
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
+import kolbooking.datn.kol.domain.Platform;
+
+import java.math.BigDecimal;
+import java.time.LocalDate;
+
+/** Partial update — only non-null fields are applied. */
+public record ProductUpdateRequest(
+        @Size(max = 200) String title,
+        @Size(max = 5000) String description,
+        @Size(max = 500) String imageUrl,
+        @PositiveOrZero BigDecimal budget,
+        Long categoryId,
+        Platform requiredPlatform,
+        @PositiveOrZero Long minFollowers,
+        @Min(1) Integer slots,
+        LocalDate deadline
+) {}

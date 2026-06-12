@@ -13,7 +13,8 @@ public final class BookingMapper {
         return new BookingResponse(
                 b.getId(), b.getBrandProfileId(), b.getKolProfileId(),
                 b.getCampaignTitle(), b.getCampaignBrief(), b.getDeliverables(),
-                b.getBudget(), b.getStartDate(), b.getEndDate(),
+                b.getBudget(), b.getPlatformFeePercent(), b.getPlatformFeeAmount(), b.getKolNetAmount(),
+                b.getStartDate(), b.getEndDate(),
                 b.getStatus(), b.getRejectReason(), b.getCancelReason(),
                 b.getInvoiceUrl(), b.getCreatedAt(), b.getUpdatedAt()
         );

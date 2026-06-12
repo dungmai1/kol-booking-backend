@@ -63,7 +63,7 @@ public class KolSearchService {
         if (size > 100) size = 100;
         if (page < 0) page = 0;
 
-        Sort sort = resolveSort(filter.sort());
+        Sort sort = KolSortResolver.resolve(filter.sort());
         Pageable pageable = PageRequest.of(page, size, sort);
 
         Page<KolProfile> result = kolProfileRepository.findAll(KolSpecification.matches(filter), pageable);

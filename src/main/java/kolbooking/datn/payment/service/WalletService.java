@@ -55,9 +55,12 @@ public class WalletService {
         return saveTx(wallet, TransactionType.HOLD, amount, bookingId, externalRef, note);
     }
 
+    /** Breakdown of a booking settlement: platform commission and the KOL's net credit. */
+    public record ReleaseResult(BigDecimal fee, BigDecimal net) {}
+
     @Transactional(propagation = Propagation.REQUIRED)
-    public void releaseToKol(Long brandUserId, Long kolUserId, BigDecimal grossAmount,
-                             BigDecimal feePercent, Long bookingId) {
+    public ReleaseResult releaseToKol(Long brandUserId, Long kolUserId, BigDecimal grossAmount,
+                                      BigDecimal feePercent, Long bookingId) {
         Wallet brandWallet = lockWallet(brandUserId);
         if (brandWallet.getBalanceHeld().compareTo(grossAmount) < 0) {
             throw new BusinessException("Insufficient held balance on brand wallet",
@@ -68,7 +71,9 @@ public class WalletService {
         saveTx(brandWallet, TransactionType.RELEASE, grossAmount.negate(), bookingId, null,
                 "Release from HOLD to KOL");
 
-        BigDecimal fee = grossAmount.multiply(feePercent).divide(BigDecimal.valueOf(100));
+        // Round half-up to 2 decimals (VND amounts) so fee + net == gross exactly.
+        BigDecimal fee = grossAmount.multiply(feePercent)
+                .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
         BigDecimal net = grossAmount.subtract(fee);
 
         Wallet kolWallet = lockWallet(kolUserId);
@@ -82,6 +87,7 @@ public class WalletService {
             walletRepository.save(platform);
             saveTx(platform, TransactionType.FEE, fee, bookingId, null, "Platform fee");
         }
+        return new ReleaseResult(fee, net);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)

@@ -160,6 +160,7 @@ public class KolProfileService {
                     ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
         }
 
+        recomputeAggregates(profile);
         profile.setStatus(KolProfileStatus.PENDING_REVIEW);
         profile.setRejectReason(null);
         log.info("KOL profile submitted for review: userId={}, kolProfileId={}", profile.getUserId(), profile.getId());
@@ -272,12 +273,40 @@ public class KolProfileService {
         portfolioRepository.delete(item);
     }
 
+    /**
+     * Refreshes denormalized {@code max_follower_count} and {@code min_price} from child rows.
+     * Call before status transitions (submit, approve) and after bulk imports.
+     */
+    public void recomputeAggregates(KolProfile profile) {
+        recomputeMaxFollower(profile);
+        recomputeMinPrice(profile);
+    }
+
+    /**
+     * Creates the initial DRAFT profile for a newly registered KOL user.
+     * Idempotent — no-op if a profile already exists for the user.
+     */
+    @Transactional
+    public void createInitialProfileForUser(AppUser user) {
+        if (kolProfileRepository.findByUserId(user.getId()).isPresent()) {
+            return;
+        }
+        kolProfileRepository.save(buildInitialProfile(user));
+    }
+
     @Transactional
     public KolPublicResponse getPublic(String identifier) {
         // Single JOIN FETCH avoids 4 lazy roundtrips per detail page view.
         KolProfile profile = findPublicProfile(identifier)
                 .filter(p -> p.getStatus() == KolProfileStatus.APPROVED)
                 .orElseThrow(() -> new ResourceNotFoundException("KOL not found"));
+
+        if (profile.getStatus() != KolProfileStatus.APPROVED) {
+            Long currentUserId = SecurityUtils.currentUserIdSafe();
+            if (currentUserId == null || !currentUserId.equals(profile.getUserId())) {
+                throw new ResourceNotFoundException("KOL not found");
+            }
+        }
         return KolMapper.toPublic(profile, isFavoritedByCurrentBrand(profile.getId()));
     }
 
@@ -329,14 +358,16 @@ public class KolProfileService {
         return kolProfileRepository.findByUserId(userId).orElseGet(() -> {
             AppUser user = userRepository.findById(userId)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-            String baseSlug = "kol-" + user.getId();
-            KolProfile created = KolProfile.builder()
-                    .userId(user.getId())
-                    .displayName(user.getEmail().split("@")[0])
-                    .slug(baseSlug)
-                    .status(KolProfileStatus.DRAFT)
-                    .build();
-            return kolProfileRepository.save(created);
+            return kolProfileRepository.save(buildInitialProfile(user));
         });
+    }
+
+    private static KolProfile buildInitialProfile(AppUser user) {
+        return KolProfile.builder()
+                .userId(user.getId())
+                .displayName(user.getEmail().split("@")[0])
+                .slug("kol-" + user.getId())
+                .status(KolProfileStatus.DRAFT)
+                .build();
     }
 }

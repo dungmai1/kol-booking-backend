@@ -28,6 +28,11 @@ public class AdminStatsController {
         return ApiResponse.ok(statsService.overview());
     }
 
+    @GetMapping("/commission")
+    public ApiResponse<Map<String, Object>> commission() {
+        return ApiResponse.ok(statsService.commissionSummary());
+    }
+
     @GetMapping("/bookings")
     public ApiResponse<List<Map<String, Object>>> bookingsByMonth(
             @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
