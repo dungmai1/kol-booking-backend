@@ -45,6 +45,9 @@ public class SecurityConfig {
                                 "/actuator/info",
                                 "/uploads/**"
                         ).permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.POST,
+                                "/api/internal/kols/search-candidates"
+                        ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
                                 "/api/v1/categories/**",
                                 "/api/v1/kols/search",
