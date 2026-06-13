@@ -13,6 +13,7 @@ import kolbooking.datn.common.exception.BusinessException;
 import kolbooking.datn.common.exception.ErrorCode;
 import kolbooking.datn.common.exception.ResourceNotFoundException;
 import kolbooking.datn.common.util.SecurityUtils;
+import kolbooking.datn.common.util.StringFieldUpdates;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -40,14 +41,40 @@ public class BrandProfileService {
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
 
-        if (req.companyName() != null) profile.setCompanyName(req.companyName());
-        if (req.taxCode() != null) profile.setTaxCode(req.taxCode());
-        if (req.industry() != null) profile.setIndustry(req.industry());
-        if (req.logoUrl() != null) profile.setLogoUrl(req.logoUrl());
-        if (req.website() != null) profile.setWebsite(req.website());
-        if (req.contactName() != null) profile.setContactName(req.contactName());
-        if (req.contactPhone() != null) profile.setContactPhone(req.contactPhone());
-        if (req.address() != null) profile.setAddress(req.address());
+        if (req.isCompanyNamePresent()) {
+            if (req.getCompanyName() == null || req.getCompanyName().isBlank()) {
+                throw new BusinessException("companyName must not be blank",
+                        ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
+            }
+            profile.setCompanyName(req.getCompanyName().strip());
+        }
+        if (req.isTaxCodePresent()) {
+            StringFieldUpdates.applyClearable(req.getTaxCode(), profile::setTaxCode);
+        }
+        if (req.isIndustryPresent()) {
+            StringFieldUpdates.applyClearable(req.getIndustry(), profile::setIndustry);
+        }
+        if (req.isLogoUrlPresent()) {
+            StringFieldUpdates.applyClearable(req.getLogoUrl(), profile::setLogoUrl);
+        }
+        if (req.isWebsitePresent()) {
+            StringFieldUpdates.applyClearable(req.getWebsite(), profile::setWebsite);
+        }
+        if (req.isContactNamePresent()) {
+            StringFieldUpdates.applyClearable(req.getContactName(), profile::setContactName);
+        }
+        if (req.isContactPhonePresent()) {
+            StringFieldUpdates.applyClearable(req.getContactPhone(), profile::setContactPhone);
+        }
+        if (req.isAddressPresent()) {
+            StringFieldUpdates.applyClearable(req.getAddress(), profile::setAddress);
+        }
+        if (req.isBioPresent()) {
+            StringFieldUpdates.applyClearable(req.getBio(), profile::setBio);
+        }
+        if (req.isCountryPresent()) {
+            StringFieldUpdates.applyClearable(req.getCountry(), profile::setCountry);
+        }
 
         if (profile.getStatus() == BrandProfileStatus.REJECTED) {
             profile.setStatus(BrandProfileStatus.DRAFT);

@@ -15,6 +15,8 @@ public record BrandProfileResponse(
         String contactName,
         String contactPhone,
         String address,
+        String bio,
+        String country,
         BrandProfileStatus status,
         String rejectReason,
         Instant createdAt,

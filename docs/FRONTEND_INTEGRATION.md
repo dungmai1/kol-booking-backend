@@ -369,7 +369,7 @@ Không cần request body.
 
 | Param | Type | Mô tả |
 |-------|------|-------|
-| `q` | string | Tìm theo tên |
+| `q` | string | Tìm theo `displayName` hoặc `slug` (không search bio) |
 | `categoryIds` | `Long[]` | Lọc theo danh mục |
 | `platforms` | `string[]` | `TIKTOK`, `INSTAGRAM`, `YOUTUBE`, `FACEBOOK` |
 | `minFollower` | Long | Số follower tối thiểu |

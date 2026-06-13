@@ -58,6 +58,12 @@ public class BrandProfile {
     @Column(length = 500)
     private String address;
 
+    @Column(columnDefinition = "text")
+    private String bio;
+
+    @Column(length = 100)
+    private String country;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private BrandProfileStatus status;

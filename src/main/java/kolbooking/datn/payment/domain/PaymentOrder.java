@@ -48,7 +48,7 @@ public class PaymentOrder {
     @Column(nullable = false, length = 32)
     private PaymentOrderStatus status;
 
-    @Column(name = "payment_url", length = 500)
+    @Column(name = "payment_url", columnDefinition = "text")
     private String paymentUrl;
 
     @Column(name = "external_ref", length = 150, unique = true)

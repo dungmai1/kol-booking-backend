@@ -5,7 +5,7 @@
 ## Checklist
 
 ### 4.1. Bộ lọc cần hỗ trợ
-- **Từ khoá**: theo `displayName`, `bio`, tên kênh.
+- **Từ khoá** (`q`): theo `displayName` và `slug` (không search `bio` — tránh false positive như "linh hoạt").
 - **Category**: 1 hoặc nhiều (KOL có trong category nào đều match).
 - **Platform**: `TIKTOK`, `INSTAGRAM`, `YOUTUBE`, `FACEBOOK`.
 - **Follower range**: min–max (trên bất kỳ kênh nào).
@@ -44,7 +44,7 @@
 ### 4.4. Triển khai kỹ thuật
 - [ ] Dùng **JPA Specification** (hoặc Querydsl nếu muốn gọn hơn) để build query động — **không** nối string SQL bằng tay.
 - [ ] Thêm index ở DB cho các cột filter nhiều: `kol_profile.status`, `kol_social_channel.platform`, `kol_social_channel.follower_count`, `kol_pricing_package.price`.
-- [ ] Full-text search trên `displayName` + `bio`: dùng PostgreSQL `tsvector` + GIN index (migration riêng).
+- [ ] Full-text search nâng cao (ví dụ `bioQ`): dùng PostgreSQL `tsvector` + GIN index (migration riêng).
 
 ### 4.5. API endpoints
 | Method | Path | Role | Mô tả |

@@ -25,10 +25,10 @@ public final class KolSpecification {
             predicates.add(cb.equal(root.get("status"), KolProfileStatus.APPROVED));
 
             if (f.hasText()) {
-                String like = "%" + f.q().toLowerCase() + "%";
+                String like = "%" + f.q().toLowerCase().trim() + "%";
                 predicates.add(cb.or(
                         cb.like(cb.lower(root.get("displayName")), like),
-                        cb.like(cb.lower(root.get("bio")), like)
+                        cb.like(root.get("slug"), like)
                 ));
             }
             if (f.city() != null && !f.city().isBlank()) {
