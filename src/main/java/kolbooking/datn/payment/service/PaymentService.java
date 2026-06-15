@@ -243,10 +243,25 @@ public class PaymentService {
     @EventListener
     @Transactional
     public void onBookingStatusChanged(BookingStatusChangedEvent event) {
-        if (event.toStatus() != BookingStatus.COMPLETED) {
+        if (event.toStatus() == BookingStatus.COMPLETED) {
+            handleCompletion(event.bookingId());
             return;
         }
-        Booking booking = bookingService.getBookingEntity(event.bookingId());
+
+        // Refund brand whenever the booking is terminated after payment was already made.
+        // Payment is confirmed once the booking moves to IN_PROGRESS or beyond.
+        boolean wasAlreadyPaid = event.fromStatus() == BookingStatus.IN_PROGRESS
+                || event.fromStatus() == BookingStatus.DELIVERED
+                || event.fromStatus() == BookingStatus.DISPUTED;
+        boolean isRefundTrigger = event.toStatus() == BookingStatus.DELIVERY_REJECTED
+                || event.toStatus() == BookingStatus.CANCELLED_BY_ADMIN;
+        if (isRefundTrigger && wasAlreadyPaid) {
+            handleRefund(event.bookingId());
+        }
+    }
+
+    private void handleCompletion(Long bookingId) {
+        Booking booking = bookingService.getBookingEntity(bookingId);
         Long brandUserId = brandProfileService.getById(booking.getBrandProfileId()).getUserId();
         KolProfile kol = kolProfileRepository.findById(booking.getKolProfileId())
                 .orElseThrow(() -> new ResourceNotFoundException("KOL profile not found"));
@@ -258,6 +273,14 @@ public class PaymentService {
         bookingService.recordSettlement(booking, result.fee(), result.net());
         log.info("Booking {} completed; KOL {} credited net={}, platform fee={}",
                 booking.getId(), kol.getUserId(), result.net(), result.fee());
+    }
+
+    private void handleRefund(Long bookingId) {
+        Booking booking = bookingService.getBookingEntity(bookingId);
+        Long brandUserId = brandProfileService.getById(booking.getBrandProfileId()).getUserId();
+        walletService.refundBrand(brandUserId, booking.getBudget(), booking.getId(),
+                "Refund: booking " + bookingId + " terminated with status " + booking.getStatus());
+        log.info("Booking {} refunded to brand {}; amount={}", bookingId, brandUserId, booking.getBudget());
     }
 
     private static String canonicalRaw(Map<String, String> params) {

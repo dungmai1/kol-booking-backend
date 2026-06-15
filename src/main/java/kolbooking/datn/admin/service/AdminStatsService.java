@@ -22,7 +22,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.MathContext;
+import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -47,7 +50,7 @@ public class AdminStatsService {
     private BigDecimal defaultFeePercent;
 
     @Transactional(readOnly = true)
-    public Map<String, Object> overview() {
+    public Map<String, Object> overview(Instant from, Instant to) {
         Map<String, Object> out = new LinkedHashMap<>();
         Map<String, Long> users = new HashMap<>();
         for (Role r : Role.values()) {
@@ -55,24 +58,46 @@ public class AdminStatsService {
         }
         out.put("users", users);
 
-        Number bookingCount = (Number) em.createQuery("select count(b) from Booking b").getSingleResult();
+        // Bookings and GMV are filtered by the requested date range (booking creation time).
+        Number bookingCount = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM booking WHERE created_at BETWEEN :from AND :to")
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getSingleResult();
         out.put("totalBookings", bookingCount.longValue());
 
         Number gmv = (Number) em.createNativeQuery(
-                "SELECT COALESCE(SUM(budget),0) FROM booking WHERE status = 'COMPLETED'").getSingleResult();
+                "SELECT COALESCE(SUM(budget),0) FROM booking WHERE status = 'COMPLETED' AND created_at BETWEEN :from AND :to")
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getSingleResult();
         out.put("totalGmv", gmv == null ? BigDecimal.ZERO : new BigDecimal(gmv.toString()));
 
         Number platformRevenue = (Number) em.createNativeQuery(
-                "SELECT COALESCE(SUM(amount),0) FROM wallet_transaction WHERE type = 'FEE'")
+                "SELECT COALESCE(SUM(amount),0) FROM wallet_transaction WHERE type = 'FEE' AND created_at BETWEEN :from AND :to")
+                .setParameter("from", from)
+                .setParameter("to", to)
                 .getSingleResult();
         out.put("platformRevenue", platformRevenue == null
                 ? BigDecimal.ZERO : new BigDecimal(platformRevenue.toString()));
 
-        // Bookings currently in flight (accepted / running / delivered / disputed — not yet settled).
+        // Snapshot counts — date range does not apply.
         Number activeBookings = (Number) em.createNativeQuery(
                 "SELECT COUNT(*) FROM booking WHERE status IN " +
                 "('ACCEPTED','IN_PROGRESS','DELIVERED','DISPUTED')").getSingleResult();
         out.put("activeBookings", activeBookings.longValue());
+
+        Number disputeCount = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM booking WHERE status = 'DISPUTED'").getSingleResult();
+        out.put("disputeCount", disputeCount.longValue());
+
+        Number pendingKols = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM kol_profile WHERE status = 'PENDING_REVIEW'").getSingleResult();
+        out.put("pendingKolApprovals", pendingKols.longValue());
+
+        Number pendingBrands = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM brand_profile WHERE status = 'PENDING_REVIEW'").getSingleResult();
+        out.put("pendingBrandApprovals", pendingBrands.longValue());
 
         return out;
     }
@@ -101,15 +126,19 @@ public class AdminStatsService {
 
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> topKols(int limit) {
+    public List<Map<String, Object>> topKols(int limit, Instant from, Instant to) {
         List<Object[]> rows = em.createNativeQuery(
-                "SELECT b.kol_profile_id, COALESCE(SUM(b.budget), 0) AS revenue, COUNT(*) AS bookings, " +
-                "       kp.display_name, kp.avg_rating " +
+                "SELECT b.kol_profile_id, " +
+                "       SUM(COALESCE(b.kol_net_amount, " +
+                "           ROUND(b.budget * (1 - b.platform_fee_percent / 100), 2))) AS revenue, " +
+                "       COUNT(*) AS bookings, kp.display_name, kp.avg_rating " +
                 "FROM booking b JOIN kol_profile kp ON kp.id = b.kol_profile_id " +
-                "WHERE b.status = 'COMPLETED' " +
+                "WHERE b.status = 'COMPLETED' AND b.created_at BETWEEN :from AND :to " +
                 "GROUP BY b.kol_profile_id, kp.display_name, kp.avg_rating " +
                 "ORDER BY revenue DESC LIMIT :limit")
                 .setParameter("limit", limit)
+                .setParameter("from", from)
+                .setParameter("to", to)
                 .getResultList();
         return rows.stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>();
@@ -193,6 +222,65 @@ public class AdminStatsService {
 
     private static BigDecimal toBigDecimal(Number n) {
         return n == null ? BigDecimal.ZERO : new BigDecimal(n.toString());
+    }
+
+    /**
+     * Financial-risk metrics for admin ops:
+     * 1. totalEscrowHeld         — total brand funds currently frozen in escrow
+     * 2. bookingsPendingApproval — DELIVERED bookings waiting for brand review/auto-complete
+     * 3. refundRate              — DELIVERY_REJECTED / (COMPLETED + DELIVERY_REJECTED) in range
+     * 4. totalRefunded           — sum of REFUND wallet-transactions in range
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> escrowMetrics(Instant from, Instant to) {
+        Map<String, Object> out = new LinkedHashMap<>();
+
+        // 1. Sum of balance_held across all brand wallets (current snapshot, not date-ranged).
+        Number escrowHeld = (Number) em.createNativeQuery(
+                "SELECT COALESCE(SUM(w.balance_held), 0) " +
+                "FROM wallet w " +
+                "JOIN app_user u ON u.id = w.user_id " +
+                "WHERE u.role = 'BRAND'")
+                .getSingleResult();
+        out.put("totalEscrowHeld", toBigDecimal(escrowHeld));
+
+        // 2. Count DELIVERED bookings (current snapshot — all are pending brand action).
+        Number pendingApproval = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM booking WHERE status = 'DELIVERED'")
+                .getSingleResult();
+        out.put("bookingsPendingApproval", pendingApproval.longValue());
+
+        // 3. Refund rate = DELIVERY_REJECTED / (COMPLETED + DELIVERY_REJECTED) in date range.
+        Number completed = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM booking WHERE status = 'COMPLETED' AND created_at BETWEEN :from AND :to")
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getSingleResult();
+        Number rejected = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM booking WHERE status = 'DELIVERY_REJECTED' AND created_at BETWEEN :from AND :to")
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getSingleResult();
+        long completedL = completed.longValue();
+        long rejectedL  = rejected.longValue();
+        long denominator = completedL + rejectedL;
+        BigDecimal refundRate = denominator == 0
+                ? BigDecimal.ZERO
+                : new BigDecimal(rejectedL).divide(new BigDecimal(denominator), 4, RoundingMode.HALF_UP);
+        out.put("refundRate", refundRate);
+        out.put("completedBookings", completedL);
+        out.put("rejectedDeliveries", rejectedL);
+
+        // 4. Total refunded in date range (REFUND ledger entries).
+        Number totalRefunded = (Number) em.createNativeQuery(
+                "SELECT COALESCE(SUM(amount), 0) FROM wallet_transaction " +
+                "WHERE type = 'REFUND' AND created_at BETWEEN :from AND :to")
+                .setParameter("from", from)
+                .setParameter("to", to)
+                .getSingleResult();
+        out.put("totalRefunded", toBigDecimal(totalRefunded));
+
+        return out;
     }
 
     @Transactional(readOnly = true)

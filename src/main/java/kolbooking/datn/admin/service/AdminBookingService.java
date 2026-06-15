@@ -3,12 +3,18 @@ package kolbooking.datn.admin.service;
 import kolbooking.datn.admin.dto.DisputeResolutionRequest;
 import kolbooking.datn.booking.domain.Booking;
 import kolbooking.datn.booking.domain.BookingStatus;
+import kolbooking.datn.booking.domain.BookingStatusHistory;
+import kolbooking.datn.booking.dto.BookingResponse;
+import kolbooking.datn.booking.dto.ReasonRequest;
 import kolbooking.datn.booking.repository.BookingRepository;
+import kolbooking.datn.booking.repository.BookingStatusHistoryRepository;
+import kolbooking.datn.booking.service.BookingService;
 import kolbooking.datn.brand.domain.BrandProfile;
 import kolbooking.datn.brand.repository.BrandProfileRepository;
 import kolbooking.datn.common.exception.BusinessException;
 import kolbooking.datn.common.exception.ErrorCode;
 import kolbooking.datn.common.exception.ResourceNotFoundException;
+import kolbooking.datn.common.util.SecurityUtils;
 import kolbooking.datn.kol.domain.KolProfile;
 import kolbooking.datn.kol.repository.KolProfileRepository;
 import kolbooking.datn.payment.service.WalletService;
@@ -30,6 +36,8 @@ import java.math.RoundingMode;
 public class AdminBookingService {
 
     private final BookingRepository bookingRepository;
+    private final BookingStatusHistoryRepository historyRepository;
+    private final BookingService bookingService;
     private final KolProfileRepository kolProfileRepository;
     private final BrandProfileRepository brandProfileRepository;
     private final WalletService walletService;
@@ -91,10 +99,30 @@ public class AdminBookingService {
 
         booking.setCancelReason(safeNote(req));
         bookingRepository.save(booking);
+        recordHistory(bookingId, BookingStatus.DISPUTED, booking.getStatus(), safeNote(req));
         auditService.record("DISPUTE_RESOLVE_" + req.action().name(),
                 "Booking", bookingId, safeNote(req));
         log.info("Dispute resolved: bookingId={}, action={}", bookingId, req.action());
         return booking;
+    }
+
+    /** Admin-cancel a booking (any non-terminal status). Audit-logged. */
+    @Transactional
+    public BookingResponse cancelBooking(Long bookingId, ReasonRequest req) {
+        BookingResponse response = bookingService.adminCancel(bookingId, req);
+        auditService.record("BOOKING_CANCEL_BY_ADMIN", "Booking", bookingId,
+                req == null ? "" : req.reason());
+        return response;
+    }
+
+    private void recordHistory(Long bookingId, BookingStatus from, BookingStatus to, String note) {
+        historyRepository.save(BookingStatusHistory.builder()
+                .bookingId(bookingId)
+                .fromStatus(from)
+                .toStatus(to)
+                .changedByUser(SecurityUtils.currentUserIdSafe())
+                .note(note)
+                .build());
     }
 
     private String safeNote(DisputeResolutionRequest req) {

@@ -26,8 +26,12 @@ public class AdminStatsController {
     private final AdminStatsService statsService;
 
     @GetMapping("/overview")
-    public ApiResponse<Map<String, Object>> overview() {
-        return ApiResponse.ok(statsService.overview());
+    public ApiResponse<Map<String, Object>> overview(
+            @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        Instant end = to == null ? Instant.now() : to;
+        Instant start = from == null ? end.minus(365, ChronoUnit.DAYS) : from;
+        return ApiResponse.ok(statsService.overview(start, end));
     }
 
     @GetMapping("/commission")
@@ -52,8 +56,22 @@ public class AdminStatsController {
     }
 
     @GetMapping("/top-kols")
-    public ApiResponse<List<Map<String, Object>>> topKols(@RequestParam(name = "limit", defaultValue = "10") int limit) {
-        return ApiResponse.ok(statsService.topKols(limit));
+    public ApiResponse<List<Map<String, Object>>> topKols(
+            @RequestParam(name = "limit", defaultValue = "10") int limit,
+            @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        Instant end = to == null ? Instant.now() : to;
+        Instant start = from == null ? end.minus(365, ChronoUnit.DAYS) : from;
+        return ApiResponse.ok(statsService.topKols(limit, start, end));
+    }
+
+    @GetMapping("/escrow-metrics")
+    public ApiResponse<Map<String, Object>> escrowMetrics(
+            @RequestParam(name = "from", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
+            @RequestParam(name = "to", required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to) {
+        Instant end = to == null ? Instant.now() : to;
+        Instant start = from == null ? end.minus(365, ChronoUnit.DAYS) : from;
+        return ApiResponse.ok(statsService.escrowMetrics(start, end));
     }
 
     @GetMapping("/revenue")

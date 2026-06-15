@@ -11,24 +11,24 @@ import java.util.Set;
 
 public final class BookingStateMachine {
 
-    private static final Map<BookingStatus, Set<BookingStatus>> TRANSITIONS = Map.of(
-            BookingStatus.PENDING, EnumSet.of(
+    private static final Map<BookingStatus, Set<BookingStatus>> TRANSITIONS = Map.ofEntries(
+            Map.entry(BookingStatus.PENDING, EnumSet.of(
                     BookingStatus.ACCEPTED, BookingStatus.REJECTED,
-                    BookingStatus.CANCELLED, BookingStatus.CANCELLED_BY_ADMIN),
-            BookingStatus.ACCEPTED, EnumSet.of(
-                    BookingStatus.IN_PROGRESS, BookingStatus.CANCELLED_BY_ADMIN),
-            BookingStatus.IN_PROGRESS, EnumSet.of(
-                    BookingStatus.DELIVERED, BookingStatus.CANCELLED_BY_ADMIN),
-            BookingStatus.DELIVERED, EnumSet.of(
+                    BookingStatus.CANCELLED, BookingStatus.CANCELLED_BY_ADMIN)),
+            Map.entry(BookingStatus.ACCEPTED, EnumSet.of(
+                    BookingStatus.IN_PROGRESS, BookingStatus.CANCELLED_BY_ADMIN)),
+            Map.entry(BookingStatus.IN_PROGRESS, EnumSet.of(
+                    BookingStatus.DELIVERED, BookingStatus.CANCELLED_BY_ADMIN)),
+            Map.entry(BookingStatus.DELIVERED, EnumSet.of(
                     BookingStatus.COMPLETED, BookingStatus.DISPUTED,
-                    BookingStatus.DELIVERY_REJECTED, BookingStatus.CANCELLED_BY_ADMIN),
-            BookingStatus.DISPUTED, EnumSet.of(
-                    BookingStatus.COMPLETED, BookingStatus.CANCELLED_BY_ADMIN),
-            BookingStatus.COMPLETED, EnumSet.noneOf(BookingStatus.class),
-            BookingStatus.REJECTED, EnumSet.noneOf(BookingStatus.class),
-            BookingStatus.CANCELLED, EnumSet.noneOf(BookingStatus.class),
-            BookingStatus.CANCELLED_BY_ADMIN, EnumSet.noneOf(BookingStatus.class),
-            BookingStatus.DELIVERY_REJECTED, EnumSet.noneOf(BookingStatus.class)
+                    BookingStatus.DELIVERY_REJECTED, BookingStatus.CANCELLED_BY_ADMIN)),
+            Map.entry(BookingStatus.DISPUTED, EnumSet.of(
+                    BookingStatus.COMPLETED, BookingStatus.CANCELLED_BY_ADMIN)),
+            Map.entry(BookingStatus.COMPLETED, EnumSet.noneOf(BookingStatus.class)),
+            Map.entry(BookingStatus.REJECTED, EnumSet.noneOf(BookingStatus.class)),
+            Map.entry(BookingStatus.CANCELLED, EnumSet.noneOf(BookingStatus.class)),
+            Map.entry(BookingStatus.CANCELLED_BY_ADMIN, EnumSet.noneOf(BookingStatus.class)),
+            Map.entry(BookingStatus.DELIVERY_REJECTED, EnumSet.noneOf(BookingStatus.class))
     );
 
     private BookingStateMachine() {}
