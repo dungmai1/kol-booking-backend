@@ -29,6 +29,7 @@ import kolbooking.datn.common.exception.ResourceNotFoundException;
 import kolbooking.datn.common.util.SecurityUtils;
 import kolbooking.datn.kol.domain.KolProfile;
 import kolbooking.datn.kol.service.KolProfileService;
+import kolbooking.datn.payment.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,6 +54,7 @@ public class BookingService {
     private final BookingDeliverableRepository deliverableRepository;
     private final KolProfileService kolProfileService;
     private final BrandProfileService brandProfileService;
+    private final WalletService walletService;
     private final ApplicationEventPublisher eventPublisher;
 
     @Value("${app.platform.fee-percent:10}")
@@ -188,7 +190,32 @@ public class BookingService {
     @Transactional
     public BookingResponse approveDelivery(Long bookingId) {
         Booking b = requireBookingFor(bookingId, Role.BRAND);
+        if (b.getStatus() != BookingStatus.DELIVERED) {
+            throw new BusinessException("Only DELIVERED bookings can be approved",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
         transition(b, BookingStatus.COMPLETED, "Brand approved delivery");
+        return BookingMapper.toDto(b);
+    }
+
+    /**
+     * Brand rejects the submitted deliverable. Full escrow is refunded to the Brand wallet;
+     * KOL receives nothing. Distinct from dispute (admin-mediated).
+     */
+    @Transactional
+    public BookingResponse rejectDelivery(Long bookingId, ReasonRequest req) {
+        Booking b = requireBookingFor(bookingId, Role.BRAND);
+        if (b.getStatus() != BookingStatus.DELIVERED) {
+            throw new BusinessException("Only DELIVERED bookings can reject delivery",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+        BrandProfile brand = brandProfileService.getByUserId(SecurityUtils.currentUserId());
+        String reason = req == null ? null : req.reason();
+        walletService.refundBrand(brand.getUserId(), b.getBudget(), b.getId(),
+                "Delivery rejected by Brand" + (reason == null || reason.isBlank() ? "" : ": " + reason));
+        b.setCancelReason(reason);
+        transition(b, BookingStatus.DELIVERY_REJECTED, reason);
+        log.info("Delivery rejected: bookingId={}, brand={}, refund={}", b.getId(), brand.getId(), b.getBudget());
         return BookingMapper.toDto(b);
     }
 

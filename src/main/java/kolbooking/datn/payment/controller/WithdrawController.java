@@ -27,13 +27,13 @@ public class WithdrawController {
     private final WithdrawService withdrawService;
 
     @PostMapping
-    @PreAuthorize("hasRole('KOL')")
+    @PreAuthorize("hasAnyRole('KOL','BRAND')")
     public ApiResponse<WithdrawResponse> create(@Valid @RequestBody WithdrawCreateRequest request) {
         return ApiResponse.ok(withdrawService.create(request));
     }
 
     @GetMapping("/me")
-    @PreAuthorize("hasRole('KOL')")
+    @PreAuthorize("hasAnyRole('KOL','BRAND')")
     public ApiResponse<PageResponse<WithdrawResponse>> myRequests(
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {

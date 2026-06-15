@@ -21,18 +21,8 @@ public class AdminUserService {
     private final AuditService auditService;
 
     @Transactional(readOnly = true)
-    public Page<AppUser> search(String q, Role role, Pageable pageable) {
-        String query = q == null ? "" : q.trim();
-        if (role != null && !query.isEmpty()) {
-            return userRepository.findByRoleAndEmailContainingIgnoreCase(role, query, pageable);
-        }
-        if (role != null) {
-            return userRepository.findByRole(role, pageable);
-        }
-        if (!query.isEmpty()) {
-            return userRepository.findByEmailContainingIgnoreCase(query, pageable);
-        }
-        return userRepository.findAll(pageable);
+    public Page<AppUser> search(String q, Role role, UserStatus status, Pageable pageable) {
+        return userRepository.findAll(AdminUserSpecification.matches(q, role, status), pageable);
     }
 
     @Transactional

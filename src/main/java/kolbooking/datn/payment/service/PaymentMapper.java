@@ -1,5 +1,6 @@
 package kolbooking.datn.payment.service;
 
+import kolbooking.datn.auth.domain.Role;
 import kolbooking.datn.payment.domain.Wallet;
 import kolbooking.datn.payment.domain.WalletTransaction;
 import kolbooking.datn.payment.domain.WithdrawRequest;
@@ -23,9 +24,9 @@ public final class PaymentMapper {
         );
     }
 
-    public static WithdrawResponse toDto(WithdrawRequest w) {
+    public static WithdrawResponse toDto(WithdrawRequest w, Role requesterRole) {
         return new WithdrawResponse(
-                w.getId(), w.getKolUserId(), w.getAmount(),
+                w.getId(), w.getUserId(), requesterRole, w.getAmount(),
                 w.getBankName(), w.getBankAccount(), w.getAccountName(),
                 w.getStatus(), w.getRejectReason(), w.getCreatedAt(), w.getProcessedAt()
         );

@@ -4,6 +4,7 @@ import kolbooking.datn.admin.dto.AdminUserResponse;
 import kolbooking.datn.admin.service.AdminUserService;
 import kolbooking.datn.auth.domain.AppUser;
 import kolbooking.datn.auth.domain.Role;
+import kolbooking.datn.auth.domain.UserStatus;
 import kolbooking.datn.common.dto.ApiResponse;
 import kolbooking.datn.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
@@ -28,9 +29,10 @@ public class AdminUserController {
     public ApiResponse<PageResponse<AdminUserResponse>> search(
             @RequestParam(name = "q", required = false) String q,
             @RequestParam(name = "role", required = false) Role role,
+            @RequestParam(name = "status", required = false) UserStatus status,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
-        return ApiResponse.ok(PageResponse.of(adminUserService.search(q, role, PageRequest.of(page, size))
+        return ApiResponse.ok(PageResponse.of(adminUserService.search(q, role, status, PageRequest.of(page, size))
                 .map(this::toDto)));
     }
 

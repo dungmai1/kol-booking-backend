@@ -32,7 +32,7 @@ public class WithdrawRequest {
     private Long id;
 
     @Column(name = "kol_user_id", nullable = false)
-    private Long kolUserId;
+    private Long userId;
 
     @Column(nullable = false, precision = 18, scale = 2)
     private BigDecimal amount;

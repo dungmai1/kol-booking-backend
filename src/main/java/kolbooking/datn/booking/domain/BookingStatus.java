@@ -9,5 +9,7 @@ public enum BookingStatus {
     DELIVERED,
     COMPLETED,
     DISPUTED,
-    CANCELLED_BY_ADMIN
+    CANCELLED_BY_ADMIN,
+    /** Brand rejected KOL deliverable; escrow refunded to Brand wallet. */
+    DELIVERY_REJECTED
 }

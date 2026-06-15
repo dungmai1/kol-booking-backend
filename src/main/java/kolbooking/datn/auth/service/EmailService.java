@@ -13,21 +13,28 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * Transactional email dispatcher. All public methods are {@link Async} so a slow or failing
- * SMTP server never blocks (or fails) the HTTP request that triggered the email.
+ * mail provider never blocks (or fails) the HTTP request that triggered the email.
  *
- * <p>In {@code dev-mode} (no real SMTP) the message is logged instead of sent, so local flows
- * still surface the verification/reset link. In prod a {@link JavaMailSender} is auto-configured
- * from {@code spring.mail.*} and used to deliver an HTML message.
+ * <p>Default provider is {@code smtp} ({@link JavaMailSender} via {@code spring.mail.*}).
+ * Set {@code app.mail.provider=resend} to send through {@link ResendEmailClient} instead.
+ *
+ * <p>In {@code dev-mode} (or when the active provider is not configured) the message is logged
+ * instead of sent, so local flows still surface the verification/reset link.
  */
 @Slf4j
 @Service
 public class EmailService {
 
     private final ObjectProvider<JavaMailSender> mailSenderProvider;
+    private final ResendEmailClient resendEmailClient;
 
-    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider) {
+    public EmailService(ObjectProvider<JavaMailSender> mailSenderProvider, ResendEmailClient resendEmailClient) {
         this.mailSenderProvider = mailSenderProvider;
+        this.resendEmailClient = resendEmailClient;
     }
+
+    @Value("${app.mail.provider:smtp}")
+    private String provider;
 
     @Value("${app.mail.dev-mode:true}")
     private boolean devMode;
@@ -84,10 +91,21 @@ public class EmailService {
                 () -> log.info("[DEV-MAIL] Notification to={} subject={} link={}", to, subject, absoluteLink));
     }
 
-    /** Sends {@code html} to {@code to}, or runs {@code devFallback} when no real SMTP is wired. */
     private void dispatch(String to, String subject, String html, Runnable devFallback) {
+        if (devMode) {
+            devFallback.run();
+            return;
+        }
+        if ("resend".equalsIgnoreCase(provider)) {
+            sendViaResend(to, subject, html, devFallback);
+        } else {
+            sendViaSmtp(to, subject, html, devFallback);
+        }
+    }
+
+    private void sendViaSmtp(String to, String subject, String html, Runnable devFallback) {
         JavaMailSender sender = mailSenderProvider.getIfAvailable();
-        if (devMode || sender == null) {
+        if (sender == null) {
             devFallback.run();
             return;
         }
@@ -99,10 +117,35 @@ public class EmailService {
             helper.setSubject(subject);
             helper.setText(html, true);
             sender.send(message);
-            log.info("Email sent to={} subject={}", to, subject);
+            log.info("Email sent via SMTP to={} subject={}", to, subject);
         } catch (Exception ex) {
-            // Never propagate: email is best-effort and must not break the originating request.
-            log.error("Failed to send email to={} subject={}: {}", to, subject, ex.getMessage());
+            log.error("Failed to send email via SMTP to={} subject={}: {}", to, subject, ex.getMessage());
+        }
+    }
+
+    private void sendViaResend(String to, String subject, String html, Runnable devFallback) {
+        if (!resendEmailClient.isConfigured()) {
+            devFallback.run();
+            return;
+        }
+        try {
+            resendEmailClient.send(from, to, subject, html);
+            log.info("Email sent via Resend to={} subject={}", to, subject);
+        } catch (Exception ex) {
+            String message = ex.getMessage();
+            if (message != null && message.contains("domain is not verified")) {
+                log.error(
+                        "Failed to send email via Resend to={} subject={}: domain chưa xác minh. "
+                                + "Thêm và xác minh domain tại https://resend.com/domains. Chi tiết: {}",
+                        to, subject, message);
+            } else if (message != null && message.contains("only send testing emails to your own email address")) {
+                log.error(
+                        "Failed to send email via Resend to={} subject={}: sender test chỉ gửi được tới "
+                                + "email chủ tài khoản Resend. Chi tiết: {}",
+                        to, subject, message);
+            } else {
+                log.error("Failed to send email via Resend to={} subject={}: {}", to, subject, message);
+            }
         }
     }
 

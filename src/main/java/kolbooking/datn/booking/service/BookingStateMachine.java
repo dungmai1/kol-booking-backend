@@ -20,13 +20,15 @@ public final class BookingStateMachine {
             BookingStatus.IN_PROGRESS, EnumSet.of(
                     BookingStatus.DELIVERED, BookingStatus.CANCELLED_BY_ADMIN),
             BookingStatus.DELIVERED, EnumSet.of(
-                    BookingStatus.COMPLETED, BookingStatus.DISPUTED, BookingStatus.CANCELLED_BY_ADMIN),
+                    BookingStatus.COMPLETED, BookingStatus.DISPUTED,
+                    BookingStatus.DELIVERY_REJECTED, BookingStatus.CANCELLED_BY_ADMIN),
             BookingStatus.DISPUTED, EnumSet.of(
                     BookingStatus.COMPLETED, BookingStatus.CANCELLED_BY_ADMIN),
             BookingStatus.COMPLETED, EnumSet.noneOf(BookingStatus.class),
             BookingStatus.REJECTED, EnumSet.noneOf(BookingStatus.class),
             BookingStatus.CANCELLED, EnumSet.noneOf(BookingStatus.class),
-            BookingStatus.CANCELLED_BY_ADMIN, EnumSet.noneOf(BookingStatus.class)
+            BookingStatus.CANCELLED_BY_ADMIN, EnumSet.noneOf(BookingStatus.class),
+            BookingStatus.DELIVERY_REJECTED, EnumSet.noneOf(BookingStatus.class)
     );
 
     private BookingStateMachine() {}

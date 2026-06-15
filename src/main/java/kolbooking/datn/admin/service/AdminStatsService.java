@@ -1,10 +1,23 @@
 package kolbooking.datn.admin.service;
 
 import jakarta.persistence.EntityManager;
+import kolbooking.datn.admin.dto.AdminCommissionTransactionResponse;
 import kolbooking.datn.auth.domain.Role;
 import kolbooking.datn.auth.repository.AppUserRepository;
+import kolbooking.datn.booking.domain.Booking;
+import kolbooking.datn.booking.repository.BookingRepository;
+import kolbooking.datn.brand.domain.BrandProfile;
+import kolbooking.datn.brand.repository.BrandProfileRepository;
+import kolbooking.datn.common.dto.PageResponse;
+import kolbooking.datn.kol.domain.KolProfile;
+import kolbooking.datn.kol.repository.KolProfileRepository;
+import kolbooking.datn.payment.domain.TransactionType;
+import kolbooking.datn.payment.domain.WalletTransaction;
+import kolbooking.datn.payment.repository.WalletTransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -14,12 +27,20 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 public class AdminStatsService {
 
     private final AppUserRepository userRepository;
+    private final WalletTransactionRepository transactionRepository;
+    private final BookingRepository bookingRepository;
+    private final BrandProfileRepository brandProfileRepository;
+    private final KolProfileRepository kolProfileRepository;
     private final EntityManager em;
 
     @Value("${app.platform.fee-percent:10}")
@@ -122,6 +143,52 @@ public class AdminStatsService {
                 .getSingleResult();
         out.put("commissionTransactions", feeCount.longValue());
         return out;
+    }
+
+    /** Paginated FEE ledger with booking context so admin can trace commission sources. */
+    @Transactional(readOnly = true)
+    public PageResponse<AdminCommissionTransactionResponse> commissionTransactions(int page, int size) {
+        Page<WalletTransaction> txs = transactionRepository.findByTypeOrderByCreatedAtDesc(
+                TransactionType.FEE, PageRequest.of(page, size));
+
+        Set<Long> bookingIds = txs.getContent().stream()
+                .map(WalletTransaction::getBookingId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, Booking> bookings = bookingRepository.findAllById(bookingIds).stream()
+                .collect(Collectors.toMap(Booking::getId, Function.identity()));
+
+        Set<Long> brandIds = bookings.values().stream()
+                .map(Booking::getBrandProfileId)
+                .collect(Collectors.toSet());
+        Set<Long> kolIds = bookings.values().stream()
+                .map(Booking::getKolProfileId)
+                .collect(Collectors.toSet());
+
+        Map<Long, BrandProfile> brands = brandProfileRepository.findAllById(brandIds).stream()
+                .collect(Collectors.toMap(BrandProfile::getId, Function.identity()));
+        Map<Long, KolProfile> kols = kolProfileRepository.findAllById(kolIds).stream()
+                .collect(Collectors.toMap(KolProfile::getId, Function.identity()));
+
+        Page<AdminCommissionTransactionResponse> mapped = txs.map(tx -> {
+            Booking booking = tx.getBookingId() == null ? null : bookings.get(tx.getBookingId());
+            BrandProfile brand = booking == null ? null : brands.get(booking.getBrandProfileId());
+            KolProfile kol = booking == null ? null : kols.get(booking.getKolProfileId());
+            return new AdminCommissionTransactionResponse(
+                    tx.getId(),
+                    tx.getAmount(),
+                    tx.getCreatedAt(),
+                    tx.getBookingId(),
+                    booking == null ? null : booking.getCampaignTitle(),
+                    booking == null ? null : booking.getBudget(),
+                    booking == null ? null : booking.getPlatformFeePercent(),
+                    brand == null ? null : brand.getCompanyName(),
+                    kol == null ? null : kol.getDisplayName(),
+                    booking == null ? null : booking.getStatus().name(),
+                    tx.getNote());
+        });
+        return PageResponse.of(mapped);
     }
 
     private static BigDecimal toBigDecimal(Number n) {

@@ -1,7 +1,9 @@
 package kolbooking.datn.admin.controller;
 
+import kolbooking.datn.admin.dto.AdminCommissionTransactionResponse;
 import kolbooking.datn.admin.service.AdminStatsService;
 import kolbooking.datn.common.dto.ApiResponse;
+import kolbooking.datn.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -31,6 +33,13 @@ public class AdminStatsController {
     @GetMapping("/commission")
     public ApiResponse<Map<String, Object>> commission() {
         return ApiResponse.ok(statsService.commissionSummary());
+    }
+
+    @GetMapping("/commission/transactions")
+    public ApiResponse<PageResponse<AdminCommissionTransactionResponse>> commissionTransactions(
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "20") int size) {
+        return ApiResponse.ok(statsService.commissionTransactions(page, size));
     }
 
     @GetMapping("/bookings")

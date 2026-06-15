@@ -51,7 +51,8 @@ public class BookingScheduler {
                 BookingStatus.DELIVERED, threshold);
         stale.forEach(b -> {
             try {
-                bookingService.transition(b, BookingStatus.COMPLETED, "Auto-completed: no dispute within " + autoCompleteDays + " days");
+                bookingService.transition(b, BookingStatus.COMPLETED,
+                        "Auto-completed: Brand did not respond within " + autoCompleteDays + " days");
             } catch (Exception ex) {
                 log.warn("Failed to auto-complete booking {}: {}", b.getId(), ex.getMessage());
             }

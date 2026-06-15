@@ -3,6 +3,7 @@
 --
 -- Phụ thuộc: V32 (kol slug m-thang3001), V15/V20 (brand users)
 -- Join brand qua email seed để tránh lệch tên company_name giữa môi trường.
+-- Idempotent: booking dùng NOT EXISTS, review dùng ON CONFLICT DO NOTHING.
 -- =====================================================================
 
 INSERT INTO booking (
@@ -36,7 +37,12 @@ FROM (VALUES
 ) AS m(brand_email, kol_slug, campaign_title, campaign_brief, deliverables, budget, start_date, end_date)
 JOIN app_user brand_u ON brand_u.email = m.brand_email
 JOIN brand_profile bp ON bp.user_id = brand_u.id
-JOIN kol_profile   kp ON kp.slug = m.kol_slug;
+JOIN kol_profile   kp ON kp.slug = m.kol_slug
+WHERE NOT EXISTS (
+    SELECT 1 FROM booking eb
+    WHERE eb.campaign_title = m.campaign_title
+      AND eb.kol_profile_id = kp.id
+);
 
 INSERT INTO review (booking_id, author_id, target_id, direction, rating, comment)
 SELECT b.id, brand_u.id, kol_u.id, 'BRAND_TO_KOL', r.rating, r.comment
@@ -57,7 +63,8 @@ JOIN brand_profile bp      ON bp.id            = b.brand_profile_id
 JOIN kol_profile   kp      ON kp.id            = b.kol_profile_id
 JOIN app_user      brand_u ON brand_u.id       = bp.user_id
 JOIN app_user      kol_u   ON kol_u.id         = kp.user_id
-WHERE kp.slug = 'm-thang3001';
+WHERE kp.slug = 'm-thang3001'
+ON CONFLICT ON CONSTRAINT uk_review_booking_direction DO NOTHING;
 
 INSERT INTO review (booking_id, author_id, target_id, direction, rating, comment)
 SELECT b.id, kol_u.id, brand_u.id, 'KOL_TO_BRAND', r.rating, r.comment
@@ -72,7 +79,8 @@ JOIN brand_profile bp      ON bp.id            = b.brand_profile_id
 JOIN kol_profile   kp      ON kp.id            = b.kol_profile_id
 JOIN app_user      kol_u   ON kol_u.id         = kp.user_id
 JOIN app_user      brand_u ON brand_u.id       = bp.user_id
-WHERE kp.slug = 'm-thang3001';
+WHERE kp.slug = 'm-thang3001'
+ON CONFLICT ON CONSTRAINT uk_review_booking_direction DO NOTHING;
 
 UPDATE kol_profile k SET
     avg_rating   = stats.avg_rating,

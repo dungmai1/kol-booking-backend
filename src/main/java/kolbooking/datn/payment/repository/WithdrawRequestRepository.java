@@ -7,6 +7,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface WithdrawRequestRepository extends JpaRepository<WithdrawRequest, Long> {
-    Page<WithdrawRequest> findByKolUserId(Long kolUserId, Pageable pageable);
+    Page<WithdrawRequest> findByUserId(Long userId, Pageable pageable);
     Page<WithdrawRequest> findByStatus(WithdrawStatus status, Pageable pageable);
 }

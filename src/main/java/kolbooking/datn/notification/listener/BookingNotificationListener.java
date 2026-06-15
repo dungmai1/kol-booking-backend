@@ -81,6 +81,14 @@ public class BookingNotificationListener {
             case DISPUTED -> notify(brandUserId, NotificationType.BOOKING_DISPUTED,
                     "Booking đang tranh chấp",
                     "Booking \"" + title + "\" đã được chuyển sang trạng thái tranh chấp.", link);
+            case DELIVERY_REJECTED -> {
+                notify(brandUserId, NotificationType.BOOKING_CANCELLED,
+                        "Đã từ chối nội dung",
+                        "Bạn đã từ chối deliverable. Ngân sách đã hoàn về ví: " + title, link);
+                notify(kolUserId, NotificationType.BOOKING_CANCELLED,
+                        "Brand từ chối nội dung",
+                        "Brand đã từ chối deliverable cho: " + title + ". Bạn sẽ không nhận thanh toán.", link);
+            }
             case CANCELLED_BY_ADMIN -> {
                 notify(brandUserId, NotificationType.BOOKING_CANCELLED,
                         "Booking bị admin huỷ", "Booking \"" + title + "\" đã bị admin huỷ.", link);
