@@ -13,5 +13,9 @@ public record ReviewResponse(
         Integer rating,
         String comment,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        String authorDisplayName,
+        String authorAvatarUrl,
+        String authorKolSlug,
+        Long authorBrandProfileId
 ) {}

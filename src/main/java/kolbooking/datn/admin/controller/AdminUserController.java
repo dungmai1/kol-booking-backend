@@ -5,8 +5,10 @@ import kolbooking.datn.admin.service.AdminUserService;
 import kolbooking.datn.auth.domain.AppUser;
 import kolbooking.datn.auth.domain.Role;
 import kolbooking.datn.auth.domain.UserStatus;
+import kolbooking.datn.brand.repository.BrandProfileRepository;
 import kolbooking.datn.common.dto.ApiResponse;
 import kolbooking.datn.common.dto.PageResponse;
+import kolbooking.datn.kol.repository.KolProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -24,6 +26,8 @@ import org.springframework.web.bind.annotation.RestController;
 public class AdminUserController {
 
     private final AdminUserService adminUserService;
+    private final KolProfileRepository kolProfileRepository;
+    private final BrandProfileRepository brandProfileRepository;
 
     @GetMapping
     public ApiResponse<PageResponse<AdminUserResponse>> search(
@@ -47,7 +51,34 @@ public class AdminUserController {
     }
 
     private AdminUserResponse toDto(AppUser u) {
-        return new AdminUserResponse(u.getId(), u.getEmail(), u.getRole(), u.getStatus(),
-                u.isEmailVerified(), u.getCreatedAt());
+        String profileDisplayName = null;
+        String kolSlug = null;
+        Long brandProfileId = null;
+
+        if (u.getRole() == Role.KOL) {
+            var kol = kolProfileRepository.findByUserId(u.getId());
+            if (kol.isPresent()) {
+                profileDisplayName = kol.get().getDisplayName();
+                kolSlug = kol.get().getSlug();
+            }
+        } else if (u.getRole() == Role.BRAND) {
+            var brand = brandProfileRepository.findByUserId(u.getId());
+            if (brand.isPresent()) {
+                profileDisplayName = brand.get().getCompanyName();
+                brandProfileId = brand.get().getId();
+            }
+        }
+
+        return new AdminUserResponse(
+                u.getId(),
+                u.getEmail(),
+                u.getRole(),
+                u.getStatus(),
+                u.isEmailVerified(),
+                u.getCreatedAt(),
+                profileDisplayName,
+                kolSlug,
+                brandProfileId
+        );
     }
 }

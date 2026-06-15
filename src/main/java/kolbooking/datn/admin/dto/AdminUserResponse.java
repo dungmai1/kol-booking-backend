@@ -11,5 +11,8 @@ public record AdminUserResponse(
         Role role,
         UserStatus status,
         boolean emailVerified,
-        Instant createdAt
+        Instant createdAt,
+        String profileDisplayName,
+        String kolSlug,
+        Long brandProfileId
 ) {}

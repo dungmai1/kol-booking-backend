@@ -43,6 +43,7 @@ public class ReviewService {
     private final BookingService bookingService;
     private final BrandProfileService brandProfileService;
     private final KolProfileRepository kolProfileRepository;
+    private final ReviewAuthorEnricher reviewAuthorEnricher;
     private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
@@ -102,7 +103,7 @@ public class ReviewService {
                 review.getId(), bookingId, authorUserId, targetUserId, direction, review.getRating()));
         log.info("Review created: id={}, bookingId={}, direction={}, rating={}",
                 review.getId(), bookingId, direction, review.getRating());
-        return ReviewMapper.toDto(review);
+        return reviewAuthorEnricher.toDto(review);
     }
 
     @Transactional
@@ -124,13 +125,13 @@ public class ReviewService {
             kolProfileRepository.findById(bookingService.getBookingEntity(saved.getBookingId()).getKolProfileId())
                     .ifPresent(this::recomputeKolRating);
         }
-        return ReviewMapper.toDto(saved);
+        return reviewAuthorEnricher.toDto(saved);
     }
 
     @Transactional(readOnly = true)
     public Page<ReviewResponse> listForUser(Long targetUserId, Pageable pageable) {
         return reviewRepository.findByTargetIdOrderByCreatedAtDesc(targetUserId, pageable)
-                .map(ReviewMapper::toDto);
+                .map(reviewAuthorEnricher::toDto);
     }
 
     private void recomputeKolRating(KolProfile kol) {
