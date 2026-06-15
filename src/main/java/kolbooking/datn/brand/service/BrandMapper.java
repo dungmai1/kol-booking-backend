@@ -2,6 +2,9 @@ package kolbooking.datn.brand.service;
 
 import kolbooking.datn.brand.domain.BrandProfile;
 import kolbooking.datn.brand.dto.BrandProfileResponse;
+import kolbooking.datn.brand.dto.BrandPublicResponse;
+
+import java.math.BigDecimal;
 
 public final class BrandMapper {
 
@@ -15,6 +18,24 @@ public final class BrandMapper {
                 b.getBio(), b.getCountry(),
                 b.getStatus(), b.getRejectReason(),
                 b.getCreatedAt(), b.getUpdatedAt()
+        );
+    }
+
+    public static BrandPublicResponse toPublic(BrandProfile b, BigDecimal avgRating, int reviewCount) {
+        return new BrandPublicResponse(
+                b.getId(),
+                b.getUserId(),
+                b.getCompanyName(),
+                b.getIndustry(),
+                b.getLogoUrl(),
+                b.getWebsite(),
+                b.getAddress(),
+                b.getBio(),
+                b.getCountry(),
+                b.getStatus(),
+                avgRating,
+                reviewCount,
+                b.getCreatedAt()
         );
     }
 }

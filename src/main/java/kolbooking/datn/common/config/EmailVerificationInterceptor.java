@@ -58,7 +58,9 @@ public class EmailVerificationInterceptor implements HandlerInterceptor {
             "/api/v1/plans",
             "/api/v1/plans/**",
             "/api/v1/products",
-            "/api/v1/products/*"
+            "/api/v1/products/*",
+            "/api/v1/brands/*",
+            "/api/v1/brands/*/products"
     );
 
     @Override

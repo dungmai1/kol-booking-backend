@@ -8,16 +8,24 @@ import kolbooking.datn.brand.domain.BrandProfile;
 import kolbooking.datn.brand.domain.BrandProfileStatus;
 import kolbooking.datn.brand.dto.BrandProfileResponse;
 import kolbooking.datn.brand.dto.BrandProfileUpdateRequest;
+import kolbooking.datn.brand.dto.BrandPublicResponse;
 import kolbooking.datn.brand.repository.BrandProfileRepository;
 import kolbooking.datn.common.exception.BusinessException;
 import kolbooking.datn.common.exception.ErrorCode;
 import kolbooking.datn.common.exception.ResourceNotFoundException;
 import kolbooking.datn.common.util.SecurityUtils;
 import kolbooking.datn.common.util.StringFieldUpdates;
+import kolbooking.datn.review.domain.Review;
+import kolbooking.datn.review.repository.ReviewRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 @Slf4j
 @Service
@@ -26,6 +34,7 @@ public class BrandProfileService {
 
     private final BrandProfileRepository brandProfileRepository;
     private final AppUserRepository userRepository;
+    private final ReviewRepository reviewRepository;
 
     @Transactional
     public BrandProfileResponse getMyProfile() {
@@ -108,6 +117,42 @@ public class BrandProfileService {
         return brandProfileRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("BrandProfile", id));
     }
+
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public BrandPublicResponse getPublicById(Long id) {
+        BrandProfile profile = requirePublicBrand(id);
+        RatingSummary rating = computeRating(profile.getUserId());
+        return BrandMapper.toPublic(profile, rating.avgRating(), rating.reviewCount());
+    }
+
+    /** Ensures the brand exists and is visible to the current caller (public APPROVED or owner preview). */
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public BrandProfile requirePublicBrand(Long id) {
+        BrandProfile profile = brandProfileRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Brand not found"));
+
+        if (profile.getStatus() != BrandProfileStatus.APPROVED) {
+            Long currentUserId = SecurityUtils.currentUserIdSafe();
+            if (currentUserId == null || !currentUserId.equals(profile.getUserId())) {
+                throw new ResourceNotFoundException("Brand not found");
+            }
+        }
+        return profile;
+    }
+
+    private RatingSummary computeRating(Long targetUserId) {
+        Page<Review> all = reviewRepository.findByTargetIdOrderByCreatedAtDesc(
+                targetUserId, Pageable.unpaged());
+        long count = all.getTotalElements();
+        BigDecimal avg = BigDecimal.ZERO;
+        if (count > 0) {
+            int sum = all.getContent().stream().mapToInt(Review::getRating).sum();
+            avg = BigDecimal.valueOf(sum).divide(BigDecimal.valueOf(count), 2, RoundingMode.HALF_UP);
+        }
+        return new RatingSummary(avg, (int) count);
+    }
+
+    private record RatingSummary(BigDecimal avgRating, int reviewCount) {}
 
     public BrandProfile getByUserId(Long userId) {
         return brandProfileRepository.findByUserId(userId)

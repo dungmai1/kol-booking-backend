@@ -37,6 +37,9 @@ public final class ProductSpecification {
             if (f.maxBudget() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("budget"), f.maxBudget()));
             }
+            if (f.brandProfileId() != null) {
+                predicates.add(cb.equal(root.get("brandProfileId"), f.brandProfileId()));
+            }
             return cb.and(predicates.toArray(new Predicate[0]));
         };
     }

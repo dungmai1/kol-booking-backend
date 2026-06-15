@@ -90,9 +90,11 @@ public class ProductController {
             @RequestParam(name = "platform", required = false) Platform platform,
             @RequestParam(name = "minBudget", required = false) BigDecimal minBudget,
             @RequestParam(name = "maxBudget", required = false) BigDecimal maxBudget,
+            @RequestParam(name = "brandProfileId", required = false) Long brandProfileId,
             @RequestParam(name = "page", defaultValue = "0") int page,
             @RequestParam(name = "size", defaultValue = "20") int size) {
-        ProductSearchFilter filter = new ProductSearchFilter(q, categoryId, platform, minBudget, maxBudget);
+        ProductSearchFilter filter = new ProductSearchFilter(
+                q, categoryId, platform, minBudget, maxBudget, brandProfileId);
         return ApiResponse.ok(productService.browse(filter, page, size));
     }
 

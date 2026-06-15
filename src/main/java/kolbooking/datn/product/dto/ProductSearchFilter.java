@@ -9,7 +9,8 @@ public record ProductSearchFilter(
         Long categoryId,
         Platform platform,
         BigDecimal minBudget,
-        BigDecimal maxBudget
+        BigDecimal maxBudget,
+        Long brandProfileId
 ) {
     public boolean hasText() {
         return q != null && !q.isBlank();

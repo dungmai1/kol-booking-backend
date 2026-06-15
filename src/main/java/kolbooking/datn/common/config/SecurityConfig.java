@@ -56,6 +56,10 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/v1/kols/{slug:[a-z0-9-]+}")
                                 .permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET,
+                                "/api/v1/brands/{id:\\d+}",
+                                "/api/v1/brands/{id:\\d+}/products")
+                                .permitAll()
                         .requestMatchers("/api/v1/payments/webhook/**").permitAll()
                         .requestMatchers("/api/v1/payments/vnpay/**").permitAll()
                         .requestMatchers(org.springframework.http.HttpMethod.GET,
