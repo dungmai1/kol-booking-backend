@@ -5,6 +5,7 @@ import kolbooking.datn.admin.dto.DisputeResolutionRequest;
 import kolbooking.datn.admin.service.AdminBookingService;
 import kolbooking.datn.booking.domain.BookingStatus;
 import kolbooking.datn.booking.dto.BookingResponse;
+import kolbooking.datn.booking.dto.ReasonRequest;
 import kolbooking.datn.booking.service.BookingMapper;
 import kolbooking.datn.common.dto.ApiResponse;
 import kolbooking.datn.common.dto.PageResponse;
@@ -35,6 +36,12 @@ public class AdminBookingController {
         return ApiResponse.ok(PageResponse.of(
                 adminBookingService.list(status, PageRequest.of(page, size))
                         .map(BookingMapper::toDto)));
+    }
+
+    @PostMapping("/{id}/cancel")
+    public ApiResponse<BookingResponse> cancel(@PathVariable("id") Long id,
+                                               @Valid @RequestBody(required = false) ReasonRequest req) {
+        return ApiResponse.ok(adminBookingService.cancelBooking(id, req));
     }
 
     @PostMapping("/{id}/resolve-dispute")

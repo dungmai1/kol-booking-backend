@@ -1,6 +1,5 @@
 package kolbooking.datn.booking.service;
 
-import jakarta.transaction.Transactional;
 import kolbooking.datn.booking.domain.Booking;
 import kolbooking.datn.booking.domain.BookingStatus;
 import kolbooking.datn.booking.repository.BookingRepository;
@@ -28,8 +27,11 @@ public class BookingScheduler {
     @Value("${app.booking.auto-complete-days:3}")
     private long autoCompleteDays;
 
+    // No @Transactional here — each booking's transition runs in its own transaction
+    // (via bookingService.transition which is @Transactional). A shared outer transaction
+    // would cause the entire batch to roll back if any single booking's transition throws,
+    // even when the exception is caught in the forEach.
     @Scheduled(cron = "0 0 * * * *")
-    @Transactional
     public void expireStalePendingBookings() {
         Instant threshold = Instant.now().minus(pendingExpireDays, ChronoUnit.DAYS);
         List<Booking> stale = bookingRepository.findAllByStatusAndCreatedAtBefore(
@@ -44,7 +46,6 @@ public class BookingScheduler {
     }
 
     @Scheduled(cron = "0 0 3 * * *")
-    @Transactional
     public void autoCompleteDeliveredBookings() {
         Instant threshold = Instant.now().minus(autoCompleteDays, ChronoUnit.DAYS);
         List<Booking> stale = bookingRepository.findAllByStatusAndUpdatedAtBefore(

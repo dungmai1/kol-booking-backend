@@ -61,6 +61,12 @@ public class WalletService {
     @Transactional(propagation = Propagation.REQUIRED)
     public ReleaseResult releaseToKol(Long brandUserId, Long kolUserId, BigDecimal grossAmount,
                                       BigDecimal feePercent, Long bookingId) {
+        if (bookingId != null && transactionRepository.existsByBookingIdAndType(bookingId, TransactionType.RELEASE)) {
+            log.warn("Duplicate releaseToKol for bookingId={} — ignoring", bookingId);
+            BigDecimal fee = grossAmount.multiply(feePercent)
+                    .divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+            return new ReleaseResult(fee, grossAmount.subtract(fee));
+        }
         Wallet brandWallet = lockWallet(brandUserId);
         if (brandWallet.getBalanceHeld().compareTo(grossAmount) < 0) {
             throw new BusinessException("Insufficient held balance on brand wallet",
@@ -92,6 +98,10 @@ public class WalletService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public void refundBrand(Long brandUserId, BigDecimal amount, Long bookingId, String note) {
+        if (bookingId != null && transactionRepository.existsByBookingIdAndType(bookingId, TransactionType.REFUND)) {
+            log.warn("Duplicate refundBrand for bookingId={} — ignoring", bookingId);
+            return;
+        }
         Wallet wallet = lockWallet(brandUserId);
         if (wallet.getBalanceHeld().compareTo(amount) < 0) {
             throw new BusinessException("Insufficient held balance to refund",

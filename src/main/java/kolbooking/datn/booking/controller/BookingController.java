@@ -87,7 +87,7 @@ public class BookingController {
     @PostMapping("/{id}/reject-delivery")
     @PreAuthorize("hasRole('BRAND')")
     public ApiResponse<BookingResponse> rejectDelivery(@PathVariable("id") Long id,
-                                                       @Valid @RequestBody(required = false) ReasonRequest req) {
+            @Valid @RequestBody(required = false) ReasonRequest req) {
         return ApiResponse.ok(bookingService.rejectDelivery(id, req));
     }
 

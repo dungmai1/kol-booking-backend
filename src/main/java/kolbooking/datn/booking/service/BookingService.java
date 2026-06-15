@@ -134,16 +134,18 @@ public class BookingService {
     @Transactional
     public BookingResponse acceptByKol(Long bookingId) {
         Booking b = requireBookingFor(bookingId, Role.KOL);
-        transition(b, BookingStatus.ACCEPTED, null);
-        return BookingMapper.toDto(b);
+        Booking updated = transition(b, BookingStatus.ACCEPTED, null);
+        return BookingMapper.toDto(updated);
     }
 
     @Transactional
     public BookingResponse rejectByKol(Long bookingId, ReasonRequest req) {
         Booking b = requireBookingFor(bookingId, Role.KOL);
-        transition(b, BookingStatus.REJECTED, req == null ? null : req.reason());
-        b.setRejectReason(req == null ? null : req.reason());
-        return BookingMapper.toDto(b);
+        String reason = req == null ? null : req.reason();
+        Booking updated = transition(b, BookingStatus.REJECTED, reason);
+        updated.setRejectReason(reason);
+        bookingRepository.save(updated);
+        return BookingMapper.toDto(updated);
     }
 
     @Transactional
@@ -153,17 +155,19 @@ public class BookingService {
             throw new BusinessException("Only PENDING bookings can be cancelled by Brand",
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
-        transition(b, BookingStatus.CANCELLED, req == null ? null : req.reason());
-        b.setCancelReason(req == null ? null : req.reason());
-        return BookingMapper.toDto(b);
+        String reason = req == null ? null : req.reason();
+        Booking updated = transition(b, BookingStatus.CANCELLED, reason);
+        updated.setCancelReason(reason);
+        bookingRepository.save(updated);
+        return BookingMapper.toDto(updated);
     }
 
     @Transactional
     public BookingResponse markInProgress(Long bookingId) {
         Booking b = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Booking", bookingId));
-        transition(b, BookingStatus.IN_PROGRESS, "Payment received");
-        return BookingMapper.toDto(b);
+        Booking updated = transition(b, BookingStatus.IN_PROGRESS, "Payment received");
+        return BookingMapper.toDto(updated);
     }
 
     @Transactional
@@ -183,8 +187,8 @@ public class BookingService {
                 .build();
         deliverableRepository.save(d);
 
-        transition(b, BookingStatus.DELIVERED, "Deliverable submitted");
-        return BookingMapper.toDto(b);
+        Booking updated = transition(b, BookingStatus.DELIVERED, "Deliverable submitted");
+        return BookingMapper.toDto(updated);
     }
 
     @Transactional
@@ -194,8 +198,8 @@ public class BookingService {
             throw new BusinessException("Only DELIVERED bookings can be approved",
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
-        transition(b, BookingStatus.COMPLETED, "Brand approved delivery");
-        return BookingMapper.toDto(b);
+        Booking updated = transition(b, BookingStatus.COMPLETED, "Brand approved delivery");
+        return BookingMapper.toDto(updated);
     }
 
     /**
@@ -226,17 +230,19 @@ public class BookingService {
             throw new BusinessException("Only DELIVERED bookings can be disputed",
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
-        transition(b, BookingStatus.DISPUTED, req == null ? null : req.reason());
-        return BookingMapper.toDto(b);
+        Booking updated = transition(b, BookingStatus.DISPUTED, req == null ? null : req.reason());
+        return BookingMapper.toDto(updated);
     }
 
     @Transactional
     public BookingResponse adminCancel(Long bookingId, ReasonRequest req) {
         Booking b = bookingRepository.findById(bookingId)
                 .orElseThrow(() -> ResourceNotFoundException.of("Booking", bookingId));
-        transition(b, BookingStatus.CANCELLED_BY_ADMIN, req == null ? null : req.reason());
-        b.setCancelReason(req == null ? null : req.reason());
-        return BookingMapper.toDto(b);
+        String reason = req == null ? null : req.reason();
+        Booking updated = transition(b, BookingStatus.CANCELLED_BY_ADMIN, reason);
+        updated.setCancelReason(reason);
+        bookingRepository.save(updated);
+        return BookingMapper.toDto(updated);
     }
 
     public BookingResponse getBookingForParticipant(Long bookingId) {
@@ -289,16 +295,25 @@ public class BookingService {
         return PageResponse.of(result.map(BookingMapper::toDto));
     }
 
+    /**
+     * Transitions a booking to the target status with a pessimistic write lock to prevent
+     * concurrent double-disbursement (EC-1, EC-2). Returns the freshly locked Booking so
+     * callers can set additional fields (reject reason, cancel reason) and those writes land
+     * on the same entity that is actually persisted.
+     */
     @Transactional
-    public void transition(Booking b, BookingStatus target, String note) {
-        BookingStatus prev = b.getStatus();
+    public Booking transition(Booking b, BookingStatus target, String note) {
+        Booking locked = bookingRepository.findByIdForUpdate(b.getId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Booking", b.getId()));
+        BookingStatus prev = locked.getStatus();
         BookingStateMachine.ensureTransition(prev, target);
-        b.setStatus(target);
-        bookingRepository.save(b);
-        recordHistory(b.getId(), prev, target, SecurityUtils.currentUserIdSafe(), note);
+        locked.setStatus(target);
+        bookingRepository.save(locked);
+        recordHistory(locked.getId(), prev, target, SecurityUtils.currentUserIdSafe(), note);
         eventPublisher.publishEvent(new BookingStatusChangedEvent(
-                b.getId(), prev, target, SecurityUtils.currentUserIdSafe()));
-        log.info("Booking {} transitioned {} -> {}", b.getId(), prev, target);
+                locked.getId(), prev, target, SecurityUtils.currentUserIdSafe()));
+        log.info("Booking {} transitioned {} -> {}", locked.getId(), prev, target);
+        return locked;
     }
 
     private void recordHistory(Long bookingId, BookingStatus from, BookingStatus to, Long userId, String note) {
