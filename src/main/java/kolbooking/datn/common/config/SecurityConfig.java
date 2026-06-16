@@ -19,6 +19,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 @Configuration
@@ -27,6 +28,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final RateLimitFilter rateLimitFilter;
     private final UrlBasedCorsConfigurationSource corsConfigurationSource;
 
     @Bean
@@ -74,8 +76,28 @@ public class SecurityConfig {
                                 writeError(res, HttpServletResponse.SC_FORBIDDEN,
                                         "Access denied", ErrorCode.FORBIDDEN))
                 )
+                // rateLimitFilter runs first, jwtAuthFilter second — both before UPAF.
+                // Custom filter classes aren't in Spring Security's order registry, so we
+                // reference UsernamePasswordAuthenticationFilter (a built-in) for both.
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();
+    }
+
+    // Prevent Spring Boot from auto-registering these filters as servlet filters.
+    // Spring Security's filter chain manages them — double-registration breaks ordering.
+    @Bean
+    public FilterRegistrationBean<JwtAuthenticationFilter> jwtFilterRegistration(JwtAuthenticationFilter f) {
+        FilterRegistrationBean<JwtAuthenticationFilter> reg = new FilterRegistrationBean<>(f);
+        reg.setEnabled(false);
+        return reg;
+    }
+
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration(RateLimitFilter f) {
+        FilterRegistrationBean<RateLimitFilter> reg = new FilterRegistrationBean<>(f);
+        reg.setEnabled(false);
+        return reg;
     }
 
     @Bean

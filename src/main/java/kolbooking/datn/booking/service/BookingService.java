@@ -32,8 +32,10 @@ import kolbooking.datn.kol.service.KolProfileService;
 import kolbooking.datn.payment.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -57,6 +59,10 @@ public class BookingService {
     private final WalletService walletService;
     private final ApplicationEventPublisher eventPublisher;
 
+    @Lazy
+    @Autowired
+    private BookingChatSseRegistry chatSseRegistry;
+
     @Value("${app.platform.fee-percent:10}")
     private BigDecimal platformFeePercent;
 
@@ -68,6 +74,11 @@ public class BookingService {
         }
         BrandProfile brand = brandProfileService.getCurrentBrandProfile();
         KolProfile kol = kolProfileService.requireApprovedById(req.kolProfileId());
+
+        if (!req.endDate().isAfter(req.startDate())) {
+            throw new BusinessException("Ngày kết thúc phải sau ngày bắt đầu",
+                    ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
+        }
 
         Booking b = Booking.builder()
                 .brandProfileId(brand.getId())
@@ -283,7 +294,9 @@ public class BookingService {
                 .build();
         m = messageRepository.save(m);
         eventPublisher.publishEvent(new BookingMessageSentEvent(b.getId(), m.getSenderUserId()));
-        return BookingMapper.toDto(m);
+        BookingMessageResponse response = BookingMapper.toDto(m);
+        chatSseRegistry.push(bookingId, response);
+        return response;
     }
 
     public PageResponse<BookingMessageResponse> listMessages(Long bookingId, int page, int size) {

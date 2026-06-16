@@ -21,4 +21,6 @@ public final class ErrorCode {
 
     public static final String PAYMENT_ERROR        = "PAYMENT_ERROR";
     public static final String SIGNATURE_INVALID    = "SIGNATURE_INVALID";
+
+    public static final String RATE_LIMITED         = "RATE_LIMITED";
 }
