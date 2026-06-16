@@ -24,9 +24,9 @@ public final class PaymentMapper {
         );
     }
 
-    public static WithdrawResponse toDto(WithdrawRequest w, Role requesterRole) {
+    public static WithdrawResponse toDto(WithdrawRequest w, Role requesterRole, String requesterEmail) {
         return new WithdrawResponse(
-                w.getId(), w.getUserId(), requesterRole, w.getAmount(),
+                w.getId(), w.getUserId(), requesterEmail, requesterRole, w.getAmount(),
                 w.getBankName(), w.getBankAccount(), w.getAccountName(),
                 w.getStatus(), w.getRejectReason(), w.getCreatedAt(), w.getProcessedAt()
         );

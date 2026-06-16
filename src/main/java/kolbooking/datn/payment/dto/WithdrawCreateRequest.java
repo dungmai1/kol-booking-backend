@@ -8,7 +8,7 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 
 public record WithdrawCreateRequest(
-        @NotNull @DecimalMin("1") BigDecimal amount,
+        @NotNull @DecimalMin("10000") BigDecimal amount,
         @NotBlank @Size(max = 150) String bankName,
         @NotBlank @Size(max = 50) String bankAccount,
         @NotBlank @Size(max = 150) String accountName

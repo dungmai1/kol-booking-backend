@@ -10,6 +10,7 @@ import java.time.Instant;
 public record WithdrawResponse(
         Long id,
         Long userId,
+        String requesterEmail,
         Role requesterRole,
         BigDecimal amount,
         String bankName,
