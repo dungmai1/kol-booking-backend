@@ -7,10 +7,12 @@ import kolbooking.datn.booking.dto.BookingResponse;
 import kolbooking.datn.booking.dto.CreateBookingRequest;
 import kolbooking.datn.booking.dto.ReasonRequest;
 import kolbooking.datn.booking.dto.SubmitDeliverableRequest;
+import kolbooking.datn.booking.service.BookingChatSseRegistry;
 import kolbooking.datn.booking.service.BookingService;
 import kolbooking.datn.common.dto.ApiResponse;
 import kolbooking.datn.common.dto.PageResponse;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @RestController
 @RequestMapping("/api/v1/bookings")
@@ -26,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookingController {
 
     private final BookingService bookingService;
+    private final BookingChatSseRegistry chatSseRegistry;
 
     @PostMapping
     @PreAuthorize("hasRole('BRAND')")
@@ -95,6 +99,17 @@ public class BookingController {
     @PreAuthorize("hasRole('BRAND')")
     public ApiResponse<BookingResponse> dispute(@PathVariable("id") Long id, @Valid @RequestBody(required = false) ReasonRequest req) {
         return ApiResponse.ok(bookingService.dispute(id, req));
+    }
+
+    /**
+     * SSE stream for live booking chat messages.
+     * Both KOL and Brand participants can subscribe.
+     */
+    @GetMapping(value = "/{id}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter messageStream(@PathVariable("id") Long id) {
+        // Validate that the caller is a participant (reuses existing security)
+        bookingService.getBookingForParticipant(id);
+        return chatSseRegistry.connect(id, 3 * 60 * 1000L);
     }
 
     @PostMapping("/{id}/messages")

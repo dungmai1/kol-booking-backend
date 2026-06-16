@@ -1,5 +1,6 @@
 package kolbooking.datn.kol.dto;
 
+import jakarta.validation.constraints.PastOrPresent;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import kolbooking.datn.kol.domain.Gender;
@@ -13,9 +14,9 @@ public record KolProfileUpdateRequest(
         @Size(max = 150) String slug,
         @Size(max = 500) String avatarUrl,
         @Size(max = 500) String coverUrl,
-        String bio,
+        @Size(max = 2000) String bio,
         Gender gender,
-        LocalDate dateOfBirth,
+        @PastOrPresent LocalDate dateOfBirth,
         @Size(max = 100) String city,
         @Size(max = 100) String country,
         Set<Long> categoryIds

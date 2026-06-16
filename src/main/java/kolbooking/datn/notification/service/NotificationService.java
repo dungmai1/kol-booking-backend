@@ -10,6 +10,8 @@ import kolbooking.datn.notification.dto.NotificationResponse;
 import kolbooking.datn.notification.repository.NotificationRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -25,6 +27,10 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
 
+    @Lazy
+    @Autowired
+    private NotificationSseRegistry sseRegistry;
+
     @Transactional
     public Notification send(Long userId, NotificationType type, String title, String message, String link) {
         if (userId == null) return null;
@@ -37,6 +43,7 @@ public class NotificationService {
                 .build();
         n = notificationRepository.save(n);
         log.debug("Notification sent: userId={}, type={}, id={}", userId, type, n.getId());
+        sseRegistry.push(userId, NotificationMapper.toDto(n));
         return n;
     }
 

@@ -5,8 +5,10 @@ import kolbooking.datn.common.dto.PageResponse;
 import kolbooking.datn.common.util.SecurityUtils;
 import kolbooking.datn.notification.dto.NotificationResponse;
 import kolbooking.datn.notification.service.NotificationService;
+import kolbooking.datn.notification.service.NotificationSseRegistry;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.MediaType;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.util.Map;
 
@@ -25,6 +28,17 @@ import java.util.Map;
 public class NotificationController {
 
     private final NotificationService notificationService;
+    private final NotificationSseRegistry notificationSseRegistry;
+
+    /**
+     * SSE stream: client subscribes and receives real-time notification events.
+     * Timeout 3 minutes — client must reconnect after each timeout.
+     */
+    @GetMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter stream() {
+        Long userId = SecurityUtils.currentUserId();
+        return notificationSseRegistry.connect(userId, 3 * 60 * 1000L);
+    }
 
     @GetMapping("/me")
     public ApiResponse<PageResponse<NotificationResponse>> list(
