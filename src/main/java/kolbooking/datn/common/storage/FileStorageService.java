@@ -6,6 +6,7 @@ import kolbooking.datn.common.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -21,7 +22,8 @@ import java.util.UUID;
 
 @Slf4j
 @Service
-public class FileStorageService {
+@ConditionalOnProperty(name = "app.storage.provider", havingValue = "local", matchIfMissing = true)
+public class FileStorageService implements StorageService {
 
     private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;    // 5 MB
     private static final long MAX_VIDEO_BYTES = 100L * 1024 * 1024;  // 100 MB

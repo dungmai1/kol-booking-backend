@@ -15,6 +15,9 @@ public class WebConfig implements WebMvcConfigurer {
 
     private final EmailVerificationInterceptor emailVerificationInterceptor;
 
+    @Value("${app.storage.provider:local}")
+    private String storageProvider;
+
     @Value("${app.storage.local.root:uploads}")
     private String rootDir;
 
@@ -23,8 +26,10 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        String location = "file:" + Paths.get(rootDir).toAbsolutePath().toString().replace('\\', '/') + "/";
-        registry.addResourceHandler(publicUrlPrefix + "/**").addResourceLocations(location);
+        if ("local".equals(storageProvider)) {
+            String location = "file:" + Paths.get(rootDir).toAbsolutePath().toString().replace('\\', '/') + "/";
+            registry.addResourceHandler(publicUrlPrefix + "/**").addResourceLocations(location);
+        }
     }
 
     @Override
