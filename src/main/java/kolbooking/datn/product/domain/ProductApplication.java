@@ -51,6 +51,10 @@ public class ProductApplication {
     @Column(name = "proposed_price", precision = 15, scale = 2)
     private BigDecimal proposedPrice;
 
+    /** Counter-price offered by the brand in response to KOL's proposedPrice. */
+    @Column(name = "brand_counter_price", precision = 15, scale = 2)
+    private BigDecimal brandCounterPrice;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private ApplicationStatus status;

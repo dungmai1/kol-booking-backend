@@ -5,6 +5,8 @@ import kolbooking.datn.auth.domain.Role;
 import kolbooking.datn.auth.repository.AppUserRepository;
 import kolbooking.datn.auth.service.EmailService;
 import kolbooking.datn.booking.domain.Booking;
+import kolbooking.datn.booking.domain.BookingStatus;
+import kolbooking.datn.booking.event.BookingStatusChangedEvent;
 import kolbooking.datn.booking.service.BookingService;
 import kolbooking.datn.brand.service.BrandProfileService;
 import kolbooking.datn.common.dto.PageResponse;
@@ -22,6 +24,7 @@ import kolbooking.datn.product.domain.ApplicationStatus;
 import kolbooking.datn.product.domain.Product;
 import kolbooking.datn.product.domain.ProductApplication;
 import kolbooking.datn.product.domain.ProductStatus;
+import kolbooking.datn.product.dto.CounterOfferRequest;
 import kolbooking.datn.product.dto.ProductApplicationCreateRequest;
 import kolbooking.datn.product.dto.ProductApplicationResponse;
 import kolbooking.datn.product.repository.ProductApplicationRepository;
@@ -33,6 +36,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -210,8 +214,14 @@ public class ProductApplicationService {
     public ProductApplicationResponse accept(Long applicationId) {
         ProductApplication a = getApplication(applicationId);
         Product product = productService.requireOwnedProduct(a.getProductId());
-        if (a.getStatus() != ApplicationStatus.PENDING && a.getStatus() != ApplicationStatus.SHORTLISTED) {
-            throw new BusinessException("Chỉ duyệt được ứng tuyển PENDING/SHORTLISTED",
+        return doAccept(a, product);
+    }
+
+    private ProductApplicationResponse doAccept(ProductApplication a, Product product) {
+        if (a.getStatus() != ApplicationStatus.PENDING
+                && a.getStatus() != ApplicationStatus.SHORTLISTED
+                && a.getStatus() != ApplicationStatus.COUNTER_OFFERED) {
+            throw new BusinessException("Chỉ duyệt được ứng tuyển PENDING/SHORTLISTED/COUNTER_OFFERED",
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
         if (a.getBookingId() != null) {
@@ -224,15 +234,20 @@ public class ProductApplicationService {
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
 
-        BigDecimal budget = a.getProposedPrice() != null ? a.getProposedPrice() : product.getBudget();
+        // Priority: brandCounterPrice (negotiated) > proposedPrice (KOL quote) > product budget
+        BigDecimal budget = a.getBrandCounterPrice() != null ? a.getBrandCounterPrice()
+                : a.getProposedPrice() != null ? a.getProposedPrice()
+                : product.getBudget();
         if (budget == null || budget.signum() <= 0) {
             throw new BusinessException(
                     "Cần đặt ngân sách sản phẩm hoặc giá đề xuất (> 0) trước khi duyệt",
                     ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
         }
 
+        String brandName = brandProfileService.getById(product.getBrandProfileId()).getCompanyName();
         Booking booking = bookingService.createBookingFromApplication(
-                product.getBrandProfileId(), kol.getId(),
+                product.getBrandProfileId(), brandName,
+                kol.getId(), kol.getDisplayName(),
                 product.getTitle(), product.getDescription(), null,
                 budget, null, product.getDeadline());
 
@@ -253,8 +268,114 @@ public class ProductApplicationService {
             log.info("Product {} closed: all {} slot(s) filled", product.getId(), product.getSlots());
         }
 
-        log.info("Application {} accepted; booking {} created", applicationId, booking.getId());
+        log.info("Application {} accepted; booking {} created", a.getId(), booking.getId());
         return ProductMapper.toDto(a, kol);
+    }
+
+    // ---- Price negotiation ---------------------------------------------------------------------
+
+    /** Brand sends a counter-offer price to a KOL who proposed a price. */
+    @Transactional
+    public ProductApplicationResponse counterOffer(Long applicationId, CounterOfferRequest req) {
+        ProductApplication a = getApplication(applicationId);
+        Product product = productService.requireOwnedProduct(a.getProductId());
+        if (a.getProposedPrice() == null) {
+            throw new BusinessException("KOL chưa đề xuất giá, không thể thương lượng",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+        if (a.getStatus() != ApplicationStatus.PENDING && a.getStatus() != ApplicationStatus.SHORTLISTED) {
+            throw new BusinessException("Chỉ thương lượng được ứng tuyển PENDING/SHORTLISTED",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+        a.setBrandCounterPrice(req.counterPrice());
+        a.setStatus(ApplicationStatus.COUNTER_OFFERED);
+        applicationRepository.save(a);
+
+        KolProfile kol = kolProfileRepository.findById(a.getKolProfileId()).orElse(null);
+        notifyKol(kol, NotificationType.APPLICATION_COUNTER_OFFERED,
+                "Brand đã gửi giá thương lượng",
+                "Brand đề xuất mức giá " + req.counterPrice().toPlainString()
+                        + " VND cho sản phẩm \"" + product.getTitle() + "\". Vui lòng xem xét.",
+                "/applications/mine");
+        return ProductMapper.toDto(a, kol);
+    }
+
+    /** KOL accepts the brand's counter-offer → triggers immediate accept flow. */
+    @Transactional
+    public ProductApplicationResponse acceptCounter(Long applicationId) {
+        KolProfile kol = currentKol();
+        ProductApplication a = getApplication(applicationId);
+        if (!a.getKolProfileId().equals(kol.getId())) {
+            throw new BusinessException("Không phải ứng tuyển của bạn", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+        if (a.getStatus() != ApplicationStatus.COUNTER_OFFERED) {
+            throw new BusinessException("Không có giá thương lượng nào đang chờ xác nhận",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+        Product product = productRepository.findById(a.getProductId())
+                .orElseThrow(() -> ResourceNotFoundException.of("Product", a.getProductId()));
+        return doAccept(a, product);
+    }
+
+    /** KOL rejects the brand's counter-offer → reverts to PENDING. */
+    @Transactional
+    public ProductApplicationResponse rejectCounter(Long applicationId) {
+        KolProfile kol = currentKol();
+        ProductApplication a = getApplication(applicationId);
+        if (!a.getKolProfileId().equals(kol.getId())) {
+            throw new BusinessException("Không phải ứng tuyển của bạn", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
+        }
+        if (a.getStatus() != ApplicationStatus.COUNTER_OFFERED) {
+            throw new BusinessException("Không có giá thương lượng nào đang chờ xác nhận",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+        a.setBrandCounterPrice(null);
+        a.setStatus(ApplicationStatus.PENDING);
+        applicationRepository.save(a);
+
+        Product product = productRepository.findById(a.getProductId()).orElse(null);
+        Long brandUserId = product != null
+                ? brandProfileService.getById(product.getBrandProfileId()).getUserId() : null;
+        if (brandUserId != null) {
+            notifyUser(brandUserId, NotificationType.PRODUCT_APPLICATION_RECEIVED,
+                    "KOL từ chối giá thương lượng",
+                    "KOL " + kol.getDisplayName() + " đã từ chối giá thương lượng của bạn.",
+                    product != null ? "/products/" + product.getId() + "/applications" : "/products");
+        }
+        return ProductMapper.toDto(a, kol);
+    }
+
+    // ---- Booking cancellation → slot reopen ---------------------------------------------------
+
+    /**
+     * When a booking created from a product application is cancelled or rejected before payment
+     * (i.e. while still PENDING), free the slot and reopen the product if it was auto-closed.
+     */
+    @EventListener
+    @Transactional
+    public void onBookingCancelledOrRejected(BookingStatusChangedEvent event) {
+        if (event.fromStatus() != BookingStatus.PENDING) return;
+        if (event.toStatus() != BookingStatus.CANCELLED
+                && event.toStatus() != BookingStatus.REJECTED) return;
+
+        applicationRepository.findByBookingId(event.bookingId()).ifPresent(app -> {
+            if (app.getStatus() != ApplicationStatus.ACCEPTED) return;
+
+            app.setStatus(ApplicationStatus.BOOKING_CANCELLED);
+            applicationRepository.save(app);
+
+            Product product = productRepository.findById(app.getProductId()).orElse(null);
+            if (product == null || product.getStatus() != ProductStatus.CLOSED) return;
+
+            long stillAccepted = applicationRepository.countByProductIdAndStatus(
+                    product.getId(), ApplicationStatus.ACCEPTED);
+            if (stillAccepted < product.getSlots()) {
+                product.setStatus(ProductStatus.OPEN);
+                productRepository.save(product);
+                log.info("Product {} reopened: slot freed by {} booking {}",
+                        product.getId(), event.toStatus(), event.bookingId());
+            }
+        });
     }
 
     // ---- Helpers -------------------------------------------------------------------------------

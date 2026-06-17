@@ -3,6 +3,7 @@ package kolbooking.datn.product.controller;
 import jakarta.validation.Valid;
 import kolbooking.datn.common.dto.ApiResponse;
 import kolbooking.datn.common.dto.PageResponse;
+import kolbooking.datn.product.dto.CounterOfferRequest;
 import kolbooking.datn.product.dto.ProductApplicationResponse;
 import kolbooking.datn.product.dto.RejectApplicationRequest;
 import kolbooking.datn.product.service.ProductApplicationService;
@@ -60,5 +61,27 @@ public class ProductApplicationController {
             @Valid @RequestBody(required = false) RejectApplicationRequest request) {
         String reason = request == null ? null : request.reason();
         return ApiResponse.ok(applicationService.reject(id, reason), "Đã từ chối ứng tuyển");
+    }
+
+    // ---- Price negotiation ----
+
+    @PostMapping("/{id}/counter-offer")
+    @PreAuthorize("hasRole('BRAND')")
+    public ApiResponse<ProductApplicationResponse> counterOffer(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody CounterOfferRequest request) {
+        return ApiResponse.ok(applicationService.counterOffer(id, request), "Đã gửi giá thương lượng");
+    }
+
+    @PostMapping("/{id}/accept-counter")
+    @PreAuthorize("hasRole('KOL')")
+    public ApiResponse<ProductApplicationResponse> acceptCounter(@PathVariable("id") Long id) {
+        return ApiResponse.ok(applicationService.acceptCounter(id), "Đã chấp nhận giá thương lượng");
+    }
+
+    @PostMapping("/{id}/reject-counter")
+    @PreAuthorize("hasRole('KOL')")
+    public ApiResponse<ProductApplicationResponse> rejectCounter(@PathVariable("id") Long id) {
+        return ApiResponse.ok(applicationService.rejectCounter(id), "Đã từ chối giá thương lượng");
     }
 }

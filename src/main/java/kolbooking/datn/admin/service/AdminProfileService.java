@@ -9,9 +9,13 @@ import kolbooking.datn.brand.repository.BrandProfileRepository;
 import kolbooking.datn.common.exception.BusinessException;
 import kolbooking.datn.common.exception.ErrorCode;
 import kolbooking.datn.common.exception.ResourceNotFoundException;
+import kolbooking.datn.brand.dto.BrandProfileResponse;
+import kolbooking.datn.brand.service.BrandMapper;
 import kolbooking.datn.kol.domain.KolProfile;
 import kolbooking.datn.kol.domain.KolProfileStatus;
+import kolbooking.datn.kol.dto.KolProfileResponse;
 import kolbooking.datn.kol.repository.KolProfileRepository;
+import kolbooking.datn.kol.service.KolMapper;
 import kolbooking.datn.kol.service.KolProfileService;
 import kolbooking.datn.notification.domain.NotificationType;
 import kolbooking.datn.notification.service.NotificationService;
@@ -41,6 +45,36 @@ public class AdminProfileService {
         return status == null
                 ? kolProfileRepository.findAll(pageable)
                 : kolProfileRepository.findByStatus(status, pageable);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<KolProfileResponse> listKolsDetail(KolProfileStatus status, Pageable pageable) {
+        Page<KolProfile> profiles = status == null
+                ? kolProfileRepository.findAll(pageable)
+                : kolProfileRepository.findByStatus(status, pageable);
+        return profiles.map(KolMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<BrandProfileResponse> listBrandsDetail(BrandProfileStatus status, Pageable pageable) {
+        Page<BrandProfile> profiles = status == null
+                ? brandProfileRepository.findAll(pageable)
+                : brandProfileRepository.findByStatus(status, pageable);
+        return profiles.map(BrandMapper::toDto);
+    }
+
+    @Transactional(readOnly = true)
+    public KolProfileResponse getKolDetail(Long id) {
+        KolProfile k = kolProfileRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.of("KolProfile", id));
+        return KolMapper.toDto(k);
+    }
+
+    @Transactional(readOnly = true)
+    public BrandProfileResponse getBrandDetail(Long id) {
+        BrandProfile b = brandProfileRepository.findById(id)
+                .orElseThrow(() -> ResourceNotFoundException.of("BrandProfile", id));
+        return BrandMapper.toDto(b);
     }
 
     @Transactional

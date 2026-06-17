@@ -41,6 +41,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -82,7 +84,9 @@ public class BookingService {
 
         Booking b = Booking.builder()
                 .brandProfileId(brand.getId())
+                .brandCompanyName(brand.getCompanyName())
                 .kolProfileId(kol.getId())
+                .kolDisplayName(kol.getDisplayName())
                 .campaignTitle(req.campaignTitle())
                 .campaignBrief(req.campaignBrief())
                 .deliverables(req.deliverables())
@@ -108,13 +112,16 @@ public class BookingService {
      * entity so the caller can link it back to the application.
      */
     @Transactional
-    public Booking createBookingFromApplication(Long brandProfileId, Long kolProfileId,
+    public Booking createBookingFromApplication(Long brandProfileId, String brandCompanyName,
+                                                Long kolProfileId, String kolDisplayName,
                                                 String campaignTitle, String campaignBrief,
                                                 String deliverables, BigDecimal budget,
                                                 LocalDate startDate, LocalDate endDate) {
         Booking b = Booking.builder()
                 .brandProfileId(brandProfileId)
+                .brandCompanyName(brandCompanyName)
                 .kolProfileId(kolProfileId)
+                .kolDisplayName(kolDisplayName)
                 .campaignTitle(campaignTitle)
                 .campaignBrief(campaignBrief)
                 .deliverables(deliverables)
@@ -288,16 +295,27 @@ public class BookingService {
     @Transactional
     public BookingMessageResponse sendMessage(Long bookingId, BookingMessageRequest req) {
         Booking b = requireBookingForEither(bookingId);
+        String trimmedContent = req.content().trim();
+        if (trimmedContent.isEmpty()) {
+            throw new BusinessException("Nội dung tin nhắn không được để trống",
+                    ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
+        }
         BookingMessage m = BookingMessage.builder()
                 .bookingId(b.getId())
                 .senderUserId(SecurityUtils.currentUserId())
-                .content(req.content())
+                .content(trimmedContent)
                 .attachmentUrl(req.attachmentUrl())
                 .build();
         m = messageRepository.save(m);
         eventPublisher.publishEvent(new BookingMessageSentEvent(b.getId(), m.getSenderUserId()));
         BookingMessageResponse response = BookingMapper.toDto(m);
-        chatSseRegistry.push(bookingId, response);
+        // Push SSE after commit so recipients see committed data when they re-fetch
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                chatSseRegistry.push(bookingId, response);
+            }
+        });
         return response;
     }
 
@@ -305,7 +323,7 @@ public class BookingService {
         requireBookingForEither(bookingId);
         if (size <= 0 || size > 200) size = 50;
         if (page < 0) page = 0;
-        Page<BookingMessage> result = messageRepository.findByBookingIdOrderByCreatedAtAsc(
+        Page<BookingMessage> result = messageRepository.findByBookingIdOrderByCreatedAtDesc(
                 bookingId, PageRequest.of(page, size));
         return PageResponse.of(result.map(BookingMapper::toDto));
     }

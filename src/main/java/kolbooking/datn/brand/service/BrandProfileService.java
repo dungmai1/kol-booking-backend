@@ -133,8 +133,14 @@ public class BrandProfileService {
 
         if (profile.getStatus() != BrandProfileStatus.APPROVED) {
             Long currentUserId = SecurityUtils.currentUserIdSafe();
-            if (currentUserId == null || !currentUserId.equals(profile.getUserId())) {
+            if (currentUserId == null) {
                 throw new ResourceNotFoundException("Brand not found");
+            }
+            if (!currentUserId.equals(profile.getUserId())) {
+                Role currentRole = SecurityUtils.currentRole();
+                if (currentRole != Role.ADMIN) {
+                    throw new ResourceNotFoundException("Brand not found");
+                }
             }
         }
         return profile;

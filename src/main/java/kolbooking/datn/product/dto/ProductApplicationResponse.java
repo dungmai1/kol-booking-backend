@@ -19,6 +19,7 @@ public record ProductApplicationResponse(
         BigDecimal kolMinPrice,
         String message,
         BigDecimal proposedPrice,
+        BigDecimal brandCounterPrice,
         ApplicationStatus status,
         Long bookingId,
         String rejectReason,

@@ -10,7 +10,9 @@ import java.util.List;
 public record BookingResponse(
         Long id,
         Long brandProfileId,
+        String brandCompanyName,
         Long kolProfileId,
+        String kolDisplayName,
         String campaignTitle,
         String campaignBrief,
         String deliverables,

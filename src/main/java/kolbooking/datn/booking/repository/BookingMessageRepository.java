@@ -6,5 +6,5 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface BookingMessageRepository extends JpaRepository<BookingMessage, Long> {
-    Page<BookingMessage> findByBookingIdOrderByCreatedAtAsc(Long bookingId, Pageable pageable);
+    Page<BookingMessage> findByBookingIdOrderByCreatedAtDesc(Long bookingId, Pageable pageable);
 }

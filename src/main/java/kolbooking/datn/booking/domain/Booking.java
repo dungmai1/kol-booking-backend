@@ -39,6 +39,12 @@ public class Booking {
     @Column(name = "kol_profile_id", nullable = false)
     private Long kolProfileId;
 
+    @Column(name = "brand_company_name", length = 200)
+    private String brandCompanyName;
+
+    @Column(name = "kol_display_name", length = 150)
+    private String kolDisplayName;
+
     @Column(name = "campaign_title", nullable = false, length = 200)
     private String campaignTitle;
 
