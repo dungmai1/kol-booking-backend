@@ -65,7 +65,7 @@ public class EmailService {
 
     @Async
     public void sendPasswordReset(String to, String token) {
-        String link = frontendUrl + "/reset-password?token=" + token;
+        String link = frontendUrl + "/auth/reset-password?token=" + token;
         String html = layout("Đặt lại mật khẩu",
                 """
                 <p>Chào bạn,</p>

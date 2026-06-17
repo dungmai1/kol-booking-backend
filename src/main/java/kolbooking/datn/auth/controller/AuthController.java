@@ -25,6 +25,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
@@ -59,21 +63,23 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    public ApiResponse<Void> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
-        authService.verifyEmail(request);
-        return ApiResponse.ok("Email verified");
+    public ApiResponse<AuthTokens> verifyEmail(@Valid @RequestBody VerifyEmailRequest request) {
+        AuthTokens tokens = authService.verifyEmail(request);
+        return ApiResponse.ok(tokens, "Email verified");
     }
 
     /**
      * GET variant so the link inside the verification email is directly clickable from a mail
-     * client. Renders a small HTML page (success or error) instead of JSON.
+     * client. On success, redirects to the frontend with fresh JWTs in the URL hash so the SPA
+     * can store them and log the user in. On failure, renders a small HTML error page.
      */
-    @GetMapping(value = "/verify-email", produces = MediaType.TEXT_HTML_VALUE)
-    public ResponseEntity<String> verifyEmailViaLink(@RequestParam("token") String token) {
+    @GetMapping("/verify-email")
+    public ResponseEntity<?> verifyEmailViaLink(@RequestParam("token") String token) {
         try {
-            authService.verifyEmail(new VerifyEmailRequest(token));
-            return ResponseEntity.ok(resultPage(true,
-                    "Email của bạn đã được xác nhận thành công. Bạn có thể đăng nhập và sử dụng đầy đủ tính năng."));
+            AuthTokens tokens = authService.verifyEmail(new VerifyEmailRequest(token));
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(emailVerifiedRedirect(tokens))
+                    .build();
         } catch (BusinessException ex) {
             return ResponseEntity.status(ex.getStatus())
                     .contentType(MediaType.TEXT_HTML)
@@ -85,6 +91,24 @@ public class AuthController {
     public ApiResponse<Void> resendVerification(@Valid @RequestBody ResendVerificationRequest request) {
         authService.resendVerification(request.email());
         return ApiResponse.ok("If the email exists and is unverified, a new verification link has been sent");
+    }
+
+    private URI emailVerifiedRedirect(AuthTokens tokens) {
+        String fragment = "accessToken=" + urlEncode(tokens.accessToken())
+                + "&refreshToken=" + urlEncode(tokens.refreshToken())
+                + "&userId=" + tokens.userId()
+                + "&email=" + urlEncode(tokens.email())
+                + "&role=" + tokens.role().name()
+                + "&expiresIn=" + tokens.accessTokenExpiresInSeconds();
+        return URI.create(normalizedFrontendUrl() + "/auth/email-verified#" + fragment);
+    }
+
+    private String normalizedFrontendUrl() {
+        return frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
+    }
+
+    private static String urlEncode(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     private String resultPage(boolean ok, String message) {
@@ -99,11 +123,11 @@ public class AuthController {
                        padding:32px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1);">
                     <h2 style="color:%s;">%s</h2>
                     <p style="color:#374151;">%s</p>
-                    <a href="%s/login" style="background:#4f46e5;color:#fff;text-decoration:none;
+                    <a href="%s/auth/login" style="background:#4f46e5;color:#fff;text-decoration:none;
                        padding:12px 28px;border-radius:8px;display:inline-block;margin-top:16px;">Đăng nhập</a>
                   </div>
                 </body></html>
-                """.formatted(title, color, title, message, frontendUrl);
+                """.formatted(title, color, title, message, normalizedFrontendUrl());
     }
 
     @PostMapping("/forgot-password")

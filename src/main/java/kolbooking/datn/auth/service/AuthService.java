@@ -132,7 +132,7 @@ public class AuthService {
     }
 
     @Transactional
-    public void verifyEmail(VerifyEmailRequest req) {
+    public AuthTokens verifyEmail(VerifyEmailRequest req) {
         VerificationToken vt = consumeToken(req.token(), TokenPurpose.EMAIL_VERIFICATION);
         AppUser user = userRepository.findById(vt.getUserId())
                 .orElseThrow(() -> new BusinessException(
@@ -142,6 +142,7 @@ public class AuthService {
             user.setStatus(UserStatus.ACTIVE);
         }
         userRepository.save(user);
+        return buildTokens(user);
     }
 
     @Transactional
