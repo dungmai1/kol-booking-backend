@@ -99,29 +99,83 @@ public class AdminStatsService {
                 "SELECT COUNT(*) FROM brand_profile WHERE status = 'PENDING_REVIEW'").getSingleResult();
         out.put("pendingBrandApprovals", pendingBrands.longValue());
 
+        // Previous period (same duration, shifted back) for trend deltas on the dashboard.
+        long rangeSeconds = ChronoUnit.SECONDS.between(from, to);
+        Instant prevFrom = from.minusSeconds(rangeSeconds);
+        Instant prevTo = from;
+
+        Map<String, Object> previousPeriod = new LinkedHashMap<>();
+
+        // User counts that existed at the START of the current range (i.e. end of prev period).
+        Map<String, Long> prevUsers = new HashMap<>();
+        for (Role r : Role.values()) {
+            Number cnt = (Number) em.createNativeQuery(
+                    "SELECT COUNT(*) FROM app_user WHERE role = :role AND created_at < :to")
+                    .setParameter("role", r.name())
+                    .setParameter("to", from)
+                    .getSingleResult();
+            prevUsers.put(r.name(), cnt.longValue());
+        }
+        previousPeriod.put("users", prevUsers);
+
+        Number prevBookings = (Number) em.createNativeQuery(
+                "SELECT COUNT(*) FROM booking WHERE created_at BETWEEN :from AND :to")
+                .setParameter("from", prevFrom)
+                .setParameter("to", prevTo)
+                .getSingleResult();
+        previousPeriod.put("totalBookings", prevBookings.longValue());
+
+        Number prevRevenue = (Number) em.createNativeQuery(
+                "SELECT COALESCE(SUM(amount),0) FROM wallet_transaction " +
+                "WHERE type = 'FEE' AND created_at BETWEEN :from AND :to")
+                .setParameter("from", prevFrom)
+                .setParameter("to", prevTo)
+                .getSingleResult();
+        previousPeriod.put("platformRevenue",
+                prevRevenue == null ? BigDecimal.ZERO : new BigDecimal(prevRevenue.toString()));
+
+        out.put("previousPeriod", previousPeriod);
+
         return out;
     }
 
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> bookingsByMonth(Instant from, Instant to) {
-        List<Object[]> rows = em.createNativeQuery(
-                "SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month, " +
-                "       COUNT(*)                                         AS cnt, " +
-                "       COALESCE(SUM(budget), 0)                         AS total " +
-                "FROM booking " +
-                "WHERE created_at BETWEEN :from AND :to " +
-                "GROUP BY month ORDER BY month")
+    public List<Map<String, Object>> bookingsByPeriod(Instant from, Instant to, String granularity) {
+        String sql = switch (granularity) {
+            case "day" ->
+                "SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS period, " +
+                "       COUNT(*) AS cnt, COALESCE(SUM(budget), 0) AS total " +
+                "FROM booking WHERE created_at BETWEEN :from AND :to " +
+                "GROUP BY period ORDER BY period";
+            case "year" ->
+                "SELECT to_char(date_trunc('year', created_at), 'YYYY') AS period, " +
+                "       COUNT(*) AS cnt, COALESCE(SUM(budget), 0) AS total " +
+                "FROM booking WHERE created_at BETWEEN :from AND :to " +
+                "GROUP BY period ORDER BY period";
+            default ->
+                "SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS period, " +
+                "       COUNT(*) AS cnt, COALESCE(SUM(budget), 0) AS total " +
+                "FROM booking WHERE created_at BETWEEN :from AND :to " +
+                "GROUP BY period ORDER BY period";
+        };
+        List<Object[]> rows = em.createNativeQuery(sql)
                 .setParameter("from", from)
                 .setParameter("to", to)
                 .getResultList();
         return rows.stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("month", r[0]);
+            m.put("period", r[0]);
             m.put("count", ((Number) r[1]).longValue());
             m.put("total", r[2]);
             return m;
         }).toList();
+    }
+
+    /** @deprecated use {@link #bookingsByPeriod} */
+    @Deprecated
+    public List<Map<String, Object>> bookingsByMonth(Instant from, Instant to) {
+        return bookingsByPeriod(from, to, "month");
     }
 
     @Transactional(readOnly = true)
@@ -285,21 +339,42 @@ public class AdminStatsService {
 
     @Transactional(readOnly = true)
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> revenueByMonth(Instant from, Instant to) {
-        List<Object[]> rows = em.createNativeQuery(
-                "SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS month, " +
-                "       COALESCE(SUM(amount), 0)                         AS fee " +
+    public List<Map<String, Object>> revenueByPeriod(Instant from, Instant to, String granularity) {
+        String sql = switch (granularity) {
+            case "day" ->
+                "SELECT to_char(date_trunc('day', created_at), 'YYYY-MM-DD') AS period, " +
+                "       COALESCE(SUM(amount), 0) AS fee " +
                 "FROM wallet_transaction " +
                 "WHERE type = 'FEE' AND created_at BETWEEN :from AND :to " +
-                "GROUP BY month ORDER BY month")
+                "GROUP BY period ORDER BY period";
+            case "year" ->
+                "SELECT to_char(date_trunc('year', created_at), 'YYYY') AS period, " +
+                "       COALESCE(SUM(amount), 0) AS fee " +
+                "FROM wallet_transaction " +
+                "WHERE type = 'FEE' AND created_at BETWEEN :from AND :to " +
+                "GROUP BY period ORDER BY period";
+            default ->
+                "SELECT to_char(date_trunc('month', created_at), 'YYYY-MM') AS period, " +
+                "       COALESCE(SUM(amount), 0) AS fee " +
+                "FROM wallet_transaction " +
+                "WHERE type = 'FEE' AND created_at BETWEEN :from AND :to " +
+                "GROUP BY period ORDER BY period";
+        };
+        List<Object[]> rows = em.createNativeQuery(sql)
                 .setParameter("from", from)
                 .setParameter("to", to)
                 .getResultList();
         return rows.stream().map(r -> {
             Map<String, Object> m = new LinkedHashMap<>();
-            m.put("month", r[0]);
+            m.put("period", r[0]);
             m.put("fee", r[1]);
             return m;
         }).toList();
+    }
+
+    /** @deprecated use {@link #revenueByPeriod} */
+    @Deprecated
+    public List<Map<String, Object>> revenueByMonth(Instant from, Instant to) {
+        return revenueByPeriod(from, to, "month");
     }
 }
