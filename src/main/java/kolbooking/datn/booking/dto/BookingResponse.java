@@ -5,6 +5,7 @@ import kolbooking.datn.booking.domain.BookingStatus;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 
 public record BookingResponse(
         Long id,
@@ -24,5 +25,6 @@ public record BookingResponse(
         String cancelReason,
         String invoiceUrl,
         Instant createdAt,
-        Instant updatedAt
+        Instant updatedAt,
+        List<SubmittedDeliverableDto> submittedDeliverables
 ) {}

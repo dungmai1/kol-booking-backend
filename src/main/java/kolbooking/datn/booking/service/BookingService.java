@@ -193,6 +193,7 @@ public class BookingService {
                 .type(req.type())
                 .platform(req.platform())
                 .submittedUrl(req.submittedUrl())
+                .note(req.note())
                 .submittedAt(java.time.Instant.now())
                 .status(DeliverableStatus.SUBMITTED)
                 .build();
@@ -257,7 +258,8 @@ public class BookingService {
     }
 
     public BookingResponse getBookingForParticipant(Long bookingId) {
-        return BookingMapper.toDto(requireBookingForEither(bookingId));
+        Booking b = requireBookingForEither(bookingId);
+        return BookingMapper.toDto(b, deliverableRepository.findByBookingId(b.getId()));
     }
 
     public Booking getBookingEntity(Long bookingId) {

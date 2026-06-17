@@ -9,5 +9,6 @@ import kolbooking.datn.kol.domain.PricingPackageType;
 public record SubmitDeliverableRequest(
         @NotNull PricingPackageType type,
         @NotNull Platform platform,
-        @NotBlank @Size(max = 500) String submittedUrl
+        @NotBlank @Size(max = 500) String submittedUrl,
+        @Size(max = 1000) String note
 ) {}

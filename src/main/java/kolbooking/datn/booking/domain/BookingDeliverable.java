@@ -46,6 +46,9 @@ public class BookingDeliverable {
     @Column(name = "submitted_url", length = 500)
     private String submittedUrl;
 
+    @Column(columnDefinition = "TEXT")
+    private String note;
+
     @Column(name = "submitted_at")
     private Instant submittedAt;
 
