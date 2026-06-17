@@ -4,7 +4,6 @@ import kolbooking.datn.auth.domain.AppUser;
 import kolbooking.datn.auth.repository.AppUserRepository;
 import kolbooking.datn.auth.service.EmailService;
 import kolbooking.datn.booking.domain.Booking;
-import kolbooking.datn.booking.domain.BookingStatus;
 import kolbooking.datn.booking.event.BookingMessageSentEvent;
 import kolbooking.datn.booking.event.BookingStatusChangedEvent;
 import kolbooking.datn.booking.repository.BookingRepository;
@@ -16,12 +15,16 @@ import kolbooking.datn.notification.domain.NotificationType;
 import kolbooking.datn.notification.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
  * Translates booking domain events into persisted notifications + email dispatches.
- * Each handler runs in its own transaction after the publishing transaction commits.
+ * Both handlers run AFTER the publishing transaction commits (AFTER_COMMIT phase) so that
+ * SSE pushes and email sends never race against an uncommitted message/status row.
  */
 @Slf4j
 @Component
@@ -35,7 +38,8 @@ public class BookingNotificationListener {
     private final KolProfileRepository kolProfileRepository;
     private final AppUserRepository userRepository;
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onStatusChanged(BookingStatusChangedEvent event) {
         Booking booking = bookingRepository.findById(event.bookingId()).orElse(null);
         if (booking == null) return;
@@ -98,7 +102,8 @@ public class BookingNotificationListener {
         }
     }
 
-    @EventListener
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onMessageSent(BookingMessageSentEvent event) {
         Booking booking = bookingRepository.findById(event.bookingId()).orElse(null);
         if (booking == null) return;

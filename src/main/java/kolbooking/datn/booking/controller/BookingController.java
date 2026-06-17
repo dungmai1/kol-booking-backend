@@ -101,23 +101,21 @@ public class BookingController {
         return ApiResponse.ok(bookingService.dispute(id, req));
     }
 
-    /**
-     * SSE stream for live booking chat messages.
-     * Both KOL and Brand participants can subscribe.
-     */
     @GetMapping(value = "/{id}/messages/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    @PreAuthorize("hasAnyRole('BRAND', 'KOL', 'ADMIN')")
     public SseEmitter messageStream(@PathVariable("id") Long id) {
-        // Validate that the caller is a participant (reuses existing security)
         bookingService.getBookingForParticipant(id);
-        return chatSseRegistry.connect(id, 3 * 60 * 1000L);
+        return chatSseRegistry.connect(id, 30 * 60 * 1000L);
     }
 
     @PostMapping("/{id}/messages")
+    @PreAuthorize("hasAnyRole('BRAND', 'KOL', 'ADMIN')")
     public ApiResponse<BookingMessageResponse> sendMessage(@PathVariable("id") Long id, @Valid @RequestBody BookingMessageRequest req) {
         return ApiResponse.ok(bookingService.sendMessage(id, req));
     }
 
     @GetMapping("/{id}/messages")
+    @PreAuthorize("hasAnyRole('BRAND', 'KOL', 'ADMIN')")
     public ApiResponse<PageResponse<BookingMessageResponse>> listMessages(
             @PathVariable("id") Long id,
             @RequestParam(name = "page", defaultValue = "0") int page,

@@ -24,7 +24,8 @@ public final class BookingMapper {
                         d.getSubmittedUrl(), d.getNote(), d.getSubmittedAt(), d.getStatus()))
                 .toList();
         return new BookingResponse(
-                b.getId(), b.getBrandProfileId(), b.getKolProfileId(),
+                b.getId(), b.getBrandProfileId(), b.getBrandCompanyName(),
+                b.getKolProfileId(), b.getKolDisplayName(),
                 b.getCampaignTitle(), b.getCampaignBrief(), b.getDeliverables(),
                 b.getBudget(), b.getPlatformFeePercent(), b.getPlatformFeeAmount(), b.getKolNetAmount(),
                 b.getStartDate(), b.getEndDate(),

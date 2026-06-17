@@ -1,5 +1,7 @@
 package kolbooking.datn.admin.controller;
 
+import jakarta.validation.Valid;
+import kolbooking.datn.admin.dto.AdminCreateUserRequest;
 import kolbooking.datn.admin.dto.AdminUserResponse;
 import kolbooking.datn.admin.service.AdminUserService;
 import kolbooking.datn.auth.domain.AppUser;
@@ -12,9 +14,11 @@ import kolbooking.datn.kol.repository.KolProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -28,6 +32,11 @@ public class AdminUserController {
     private final AdminUserService adminUserService;
     private final KolProfileRepository kolProfileRepository;
     private final BrandProfileRepository brandProfileRepository;
+
+    @PostMapping
+    public ApiResponse<AdminUserResponse> createUser(@Valid @RequestBody AdminCreateUserRequest req) {
+        return ApiResponse.ok(toDto(adminUserService.createUser(req)));
+    }
 
     @GetMapping
     public ApiResponse<PageResponse<AdminUserResponse>> search(
@@ -48,6 +57,12 @@ public class AdminUserController {
     @PostMapping("/{id}/unban")
     public ApiResponse<AdminUserResponse> unban(@PathVariable("id") Long id) {
         return ApiResponse.ok(toDto(adminUserService.unban(id)));
+    }
+
+    @DeleteMapping("/{id}")
+    public ApiResponse<Void> deleteUser(@PathVariable("id") Long id) {
+        adminUserService.deleteUser(id);
+        return ApiResponse.ok("User deactivated");
     }
 
     private AdminUserResponse toDto(AppUser u) {

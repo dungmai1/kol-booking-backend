@@ -10,12 +10,15 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 public interface BookingRepository extends JpaRepository<Booking, Long> {
     Page<Booking> findByBrandProfileId(Long brandProfileId, Pageable pageable);
     Page<Booking> findByKolProfileId(Long kolProfileId, Pageable pageable);
+    boolean existsByBrandProfileIdAndStatusIn(Long brandProfileId, Collection<BookingStatus> statuses);
+    boolean existsByKolProfileIdAndStatusIn(Long kolProfileId, Collection<BookingStatus> statuses);
     Page<Booking> findByKolProfileIdAndStatus(Long kolProfileId, BookingStatus status, Pageable pageable);
     Page<Booking> findByStatus(BookingStatus status, Pageable pageable);
     List<Booking> findAllByStatusAndCreatedAtBefore(BookingStatus status, Instant before);

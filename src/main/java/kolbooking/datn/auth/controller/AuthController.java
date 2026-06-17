@@ -99,7 +99,7 @@ public class AuthController {
                        padding:32px;text-align:center;box-shadow:0 1px 3px rgba(0,0,0,.1);">
                     <h2 style="color:%s;">%s</h2>
                     <p style="color:#374151;">%s</p>
-                    <a href="%s/login" style="background:#4f46e5;color:#fff;text-decoration:none;
+                    <a href="%s/auth/login" style="background:#4f46e5;color:#fff;text-decoration:none;
                        padding:12px 28px;border-radius:8px;display:inline-block;margin-top:16px;">Đăng nhập</a>
                   </div>
                 </body></html>

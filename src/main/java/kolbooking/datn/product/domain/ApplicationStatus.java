@@ -6,10 +6,14 @@ public enum ApplicationStatus {
     PENDING,
     /** Marked as a shortlisted candidate by the brand. */
     SHORTLISTED,
+    /** Brand has proposed a counter price; awaiting KOL response. */
+    COUNTER_OFFERED,
     /** Accepted by the brand; a PENDING booking has been created. */
     ACCEPTED,
     /** Declined by the brand. */
     REJECTED,
     /** Withdrawn by the KOL. */
-    WITHDRAWN
+    WITHDRAWN,
+    /** Accepted but the booking was cancelled/rejected before payment — slot is freed. */
+    BOOKING_CANCELLED
 }

@@ -13,6 +13,7 @@ import kolbooking.datn.common.exception.ResourceNotFoundException;
 import kolbooking.datn.common.repository.CategoryRepository;
 import kolbooking.datn.common.util.SecurityUtils;
 import kolbooking.datn.kol.repository.KolProfileRepository;
+import kolbooking.datn.product.domain.ApplicationStatus;
 import kolbooking.datn.product.domain.Product;
 import kolbooking.datn.product.domain.ProductStatus;
 import kolbooking.datn.product.dto.ProductCreateRequest;
@@ -144,8 +145,13 @@ public class ProductService {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Product", id));
         if (p.getStatus() != ProductStatus.OPEN && !isOwner(p)) {
-            // Closed/draft postings are only visible to their owner.
-            throw ResourceNotFoundException.of("Product", id);
+            // Accepted KOLs retain read access even after the product closes.
+            Long kolId = currentKolProfileId();
+            if (kolId == null || !applicationRepository.existsByProductIdAndKolProfileIdAndStatus(
+                    p.getId(), kolId, ApplicationStatus.ACCEPTED)) {
+                throw ResourceNotFoundException.of("Product", id);
+            }
+            return enrich(p, true);
         }
         Long kolId = currentKolProfileId();
         boolean hasApplied = kolId != null

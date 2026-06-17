@@ -310,8 +310,14 @@ public class KolProfileService {
 
         if (profile.getStatus() != KolProfileStatus.APPROVED) {
             Long currentUserId = SecurityUtils.currentUserIdSafe();
-            if (currentUserId == null || !currentUserId.equals(profile.getUserId())) {
+            if (currentUserId == null) {
                 throw new ResourceNotFoundException("KOL not found");
+            }
+            if (!currentUserId.equals(profile.getUserId())) {
+                Role currentRole = SecurityUtils.currentRole();
+                if (currentRole != Role.ADMIN) {
+                    throw new ResourceNotFoundException("KOL not found");
+                }
             }
         }
         return KolMapper.toPublic(profile, isFavoritedByCurrentBrand(profile.getId()));

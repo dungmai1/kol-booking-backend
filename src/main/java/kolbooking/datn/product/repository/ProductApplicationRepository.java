@@ -16,6 +16,8 @@ public interface ProductApplicationRepository extends JpaRepository<ProductAppli
 
     boolean existsByProductIdAndKolProfileId(Long productId, Long kolProfileId);
 
+    boolean existsByProductIdAndKolProfileIdAndStatus(Long productId, Long kolProfileId, ApplicationStatus status);
+
     Optional<ProductApplication> findByProductIdAndKolProfileId(Long productId, Long kolProfileId);
 
     Page<ProductApplication> findByProductId(Long productId, Pageable pageable);
@@ -27,6 +29,8 @@ public interface ProductApplicationRepository extends JpaRepository<ProductAppli
     Page<ProductApplication> findByKolProfileId(Long kolProfileId, Pageable pageable);
 
     long countByProductIdAndStatus(Long productId, ApplicationStatus status);
+
+    Optional<ProductApplication> findByBookingId(Long bookingId);
 
     /** Among {@code productIds}, returns those the given KOL has already applied to. */
     @Query("SELECT a.productId FROM ProductApplication a "
