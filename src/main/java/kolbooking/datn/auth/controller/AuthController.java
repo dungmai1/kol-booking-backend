@@ -70,8 +70,8 @@ public class AuthController {
 
     /**
      * GET variant so the link inside the verification email is directly clickable from a mail
-     * client. On success, redirects to the frontend with fresh JWTs in the URL hash so the SPA
-     * can store them and log the user in. On failure, renders a small HTML error page.
+     * client. On success, redirects to the frontend home page with fresh JWTs in the URL hash
+     * so the SPA can store them and log the user in. On failure, renders a small HTML error page.
      */
     @GetMapping("/verify-email")
     public ResponseEntity<?> verifyEmailViaLink(@RequestParam("token") String token) {
@@ -100,7 +100,7 @@ public class AuthController {
                 + "&email=" + urlEncode(tokens.email())
                 + "&role=" + tokens.role().name()
                 + "&expiresIn=" + tokens.accessTokenExpiresInSeconds();
-        return URI.create(normalizedFrontendUrl() + "/auth/email-verified#" + fragment);
+        return URI.create(normalizedFrontendUrl() + "/#" + fragment);
     }
 
     private String normalizedFrontendUrl() {
