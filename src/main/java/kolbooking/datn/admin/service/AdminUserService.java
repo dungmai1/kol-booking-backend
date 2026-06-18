@@ -102,6 +102,11 @@ public class AdminUserService {
                     ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
         }
 
+        if (user.getStatus() == UserStatus.INACTIVE) {
+            throw new BusinessException("Tài khoản này đã bị xoá",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+
         List<BookingStatus> activeStatuses = List.of(
                 BookingStatus.PENDING, BookingStatus.ACCEPTED, BookingStatus.IN_PROGRESS);
 
