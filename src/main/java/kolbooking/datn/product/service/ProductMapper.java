@@ -31,7 +31,8 @@ public final class ProductMapper {
                 kol == null ? null : kol.getReviewCount(),
                 kol == null ? null : kol.getMaxFollowerCount(),
                 kol == null ? null : kol.getMinPrice(),
-                a.getMessage(), a.getProposedPrice(), a.getBrandCounterPrice(), a.getStatus(),
-                a.getBookingId(), a.getRejectReason(), a.getCreatedAt());
+                a.getMessage(), a.getProposedPrice(), a.getBrandCounterPrice(),
+                a.getBrandNegotiationNote(), a.getKolNegotiationReply(),
+                a.getStatus(), a.getBookingId(), a.getRejectReason(), a.getCreatedAt());
     }
 }

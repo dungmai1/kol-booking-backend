@@ -24,6 +24,7 @@ import kolbooking.datn.product.domain.ProductStatus;
 import kolbooking.datn.product.dto.CounterOfferRequest;
 import kolbooking.datn.product.dto.ProductApplicationCreateRequest;
 import kolbooking.datn.product.dto.ProductApplicationResponse;
+import kolbooking.datn.product.dto.RejectCounterRequest;
 import kolbooking.datn.product.repository.ProductApplicationRepository;
 import kolbooking.datn.product.repository.ProductRepository;
 import lombok.RequiredArgsConstructor;
@@ -41,6 +42,7 @@ import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -48,6 +50,8 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ProductApplicationService {
+
+    private static final Set<ApplicationStatus> TERMINAL_STATUSES = ApplicationStatus.TERMINAL;
 
     private final ProductRepository productRepository;
     private final ProductApplicationRepository applicationRepository;
@@ -73,27 +77,42 @@ public class ProductApplicationService {
             throw new BusinessException("Sản phẩm không còn nhận ứng tuyển",
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
-        if (applicationRepository.existsByProductIdAndKolProfileId(productId, kol.getId())) {
-            throw new BusinessException("Bạn đã ứng tuyển sản phẩm này",
-                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
-        }
 
-        ProductApplication application = ProductApplication.builder()
-                .productId(productId)
-                .kolProfileId(kol.getId())
-                .message(req == null ? null : req.message())
-                .proposedPrice(req == null ? null : req.proposedPrice())
-                .status(ApplicationStatus.PENDING)
-                .build();
-        try {
-            application = applicationRepository.saveAndFlush(application);
-        } catch (DataIntegrityViolationException ex) {
-            // Lost the race against the unique (product_id, kol_profile_id) constraint.
-            throw new BusinessException("Bạn đã ứng tuyển sản phẩm này",
-                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        Optional<ProductApplication> existing = applicationRepository.findByProductIdAndKolProfileId(productId, kol.getId());
+        ProductApplication application;
+        if (existing.isPresent()) {
+            ProductApplication prev = existing.get();
+            if (!TERMINAL_STATUSES.contains(prev.getStatus())) {
+                throw new BusinessException("Bạn đã ứng tuyển sản phẩm này",
+                        ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+            }
+            // Reactivate the existing row — unique constraint prevents creating a new one.
+            prev.setStatus(ApplicationStatus.PENDING);
+            prev.setMessage(req == null ? null : req.message());
+            prev.setProposedPrice(req == null ? null : req.proposedPrice());
+            prev.setBrandCounterPrice(null);
+            prev.setBrandNegotiationNote(null);
+            prev.setKolNegotiationReply(null);
+            prev.setBookingId(null);
+            prev.setRejectReason(null);
+            application = applicationRepository.save(prev);
+        } else {
+            application = ProductApplication.builder()
+                    .productId(productId)
+                    .kolProfileId(kol.getId())
+                    .message(req == null ? null : req.message())
+                    .proposedPrice(req == null ? null : req.proposedPrice())
+                    .status(ApplicationStatus.PENDING)
+                    .build();
+            try {
+                application = applicationRepository.saveAndFlush(application);
+            } catch (DataIntegrityViolationException ex) {
+                // Lost the race against the unique (product_id, kol_profile_id) constraint.
+                throw new BusinessException("Bạn đã ứng tuyển sản phẩm này",
+                        ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+            }
+            productRepository.incrementApplicationCount(product.getId());
         }
-
-        productRepository.incrementApplicationCount(product.getId());
 
         Long brandUserId = brandProfileService.getById(product.getBrandProfileId()).getUserId();
         notifyUser(brandUserId, NotificationType.PRODUCT_APPLICATION_RECEIVED,
@@ -112,7 +131,9 @@ public class ProductApplicationService {
         if (!a.getKolProfileId().equals(kol.getId())) {
             throw new BusinessException("Không phải ứng tuyển của bạn", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
         }
-        if (a.getStatus() != ApplicationStatus.PENDING && a.getStatus() != ApplicationStatus.SHORTLISTED) {
+        if (a.getStatus() != ApplicationStatus.PENDING
+                && a.getStatus() != ApplicationStatus.SHORTLISTED
+                && a.getStatus() != ApplicationStatus.COUNTER_OFFERED) {
             throw new BusinessException("Không thể rút ứng tuyển ở trạng thái " + a.getStatus(),
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
@@ -269,7 +290,7 @@ public class ProductApplicationService {
 
     // ---- Price negotiation ---------------------------------------------------------------------
 
-    /** Brand sends a counter-offer price to a KOL who proposed a price. */
+    /** Brand sends a counter-offer price (and optional note) to a KOL who proposed a price. */
     @Transactional
     public ProductApplicationResponse counterOffer(Long applicationId, CounterOfferRequest req) {
         ProductApplication a = getApplication(applicationId);
@@ -283,6 +304,8 @@ public class ProductApplicationService {
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
         a.setBrandCounterPrice(req.counterPrice());
+        a.setBrandNegotiationNote(req.negotiationNote());
+        a.setKolNegotiationReply(null);
         a.setStatus(ApplicationStatus.COUNTER_OFFERED);
         applicationRepository.save(a);
 
@@ -312,9 +335,9 @@ public class ProductApplicationService {
         return doAccept(a, product);
     }
 
-    /** KOL rejects the brand's counter-offer → reverts to PENDING. */
+    /** KOL rejects the brand's counter-offer (with optional reply) → reverts to PENDING. */
     @Transactional
-    public ProductApplicationResponse rejectCounter(Long applicationId) {
+    public ProductApplicationResponse rejectCounter(Long applicationId, RejectCounterRequest req) {
         KolProfile kol = currentKol();
         ProductApplication a = getApplication(applicationId);
         if (!a.getKolProfileId().equals(kol.getId())) {
@@ -325,6 +348,8 @@ public class ProductApplicationService {
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
         a.setBrandCounterPrice(null);
+        a.setBrandNegotiationNote(null);
+        a.setKolNegotiationReply(req != null ? req.replyMessage() : null);
         a.setStatus(ApplicationStatus.PENDING);
         applicationRepository.save(a);
 

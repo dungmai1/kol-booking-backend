@@ -155,7 +155,8 @@ public class ProductService {
         }
         Long kolId = currentKolProfileId();
         boolean hasApplied = kolId != null
-                && applicationRepository.existsByProductIdAndKolProfileId(p.getId(), kolId);
+                && applicationRepository.existsByProductIdAndKolProfileIdAndStatusIn(
+                        p.getId(), kolId, ApplicationStatus.ACTIVE);
         return enrich(p, hasApplied);
     }
 
@@ -230,7 +231,8 @@ public class ProductService {
 
         Set<Long> applied = (viewerKolId == null || content.isEmpty()) ? Set.of()
                 : new HashSet<>(applicationRepository.findAppliedProductIds(
-                    viewerKolId, content.stream().map(Product::getId).toList()));
+                    viewerKolId, content.stream().map(Product::getId).toList(),
+                    ApplicationStatus.ACTIVE));
 
         return PageResponse.of(page.map(p -> ProductMapper.toDto(
                 p,

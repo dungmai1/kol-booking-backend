@@ -55,6 +55,14 @@ public class ProductApplication {
     @Column(name = "brand_counter_price", precision = 15, scale = 2)
     private BigDecimal brandCounterPrice;
 
+    /** Optional message from brand accompanying the counter-offer. */
+    @Column(name = "brand_negotiation_note", columnDefinition = "text")
+    private String brandNegotiationNote;
+
+    /** Optional reply from KOL when rejecting a counter-offer. */
+    @Column(name = "kol_negotiation_reply", columnDefinition = "text")
+    private String kolNegotiationReply;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private ApplicationStatus status;
