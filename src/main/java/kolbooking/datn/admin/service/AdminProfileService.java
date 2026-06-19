@@ -1,8 +1,5 @@
 package kolbooking.datn.admin.service;
 
-import kolbooking.datn.auth.domain.AppUser;
-import kolbooking.datn.auth.repository.AppUserRepository;
-import kolbooking.datn.auth.service.EmailService;
 import kolbooking.datn.brand.domain.BrandProfile;
 import kolbooking.datn.brand.domain.BrandProfileStatus;
 import kolbooking.datn.brand.repository.BrandProfileRepository;
@@ -34,9 +31,7 @@ public class AdminProfileService {
 
     private final KolProfileRepository kolProfileRepository;
     private final BrandProfileRepository brandProfileRepository;
-    private final AppUserRepository userRepository;
     private final NotificationService notificationService;
-    private final EmailService emailService;
     private final AuditService auditService;
     private final KolProfileService kolProfileService;
 
@@ -162,7 +157,5 @@ public class AdminProfileService {
 
     private void notifyUser(Long userId, NotificationType type, String title, String message, String link) {
         notificationService.send(userId, type, title, message, link);
-        userRepository.findById(userId).map(AppUser::getEmail)
-                .ifPresent(email -> emailService.sendNotification(email, title, message, link));
     }
 }

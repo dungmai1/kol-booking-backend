@@ -1,8 +1,5 @@
 package kolbooking.datn.notification.listener;
 
-import kolbooking.datn.auth.domain.AppUser;
-import kolbooking.datn.auth.repository.AppUserRepository;
-import kolbooking.datn.auth.service.EmailService;
 import kolbooking.datn.booking.domain.Booking;
 import kolbooking.datn.booking.domain.BookingStatus;
 import kolbooking.datn.booking.event.BookingMessageSentEvent;
@@ -23,9 +20,9 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 /**
- * Translates booking domain events into persisted notifications + email dispatches.
+ * Translates booking domain events into persisted in-app notifications (SSE).
  * Both handlers run AFTER the publishing transaction commits (AFTER_COMMIT phase) so that
- * SSE pushes and email sends never race against an uncommitted message/status row.
+ * SSE pushes never race against an uncommitted message/status row.
  */
 @Slf4j
 @Component
@@ -33,11 +30,9 @@ import org.springframework.transaction.event.TransactionalEventListener;
 public class BookingNotificationListener {
 
     private final NotificationService notificationService;
-    private final EmailService emailService;
     private final BookingRepository bookingRepository;
     private final BrandProfileRepository brandProfileRepository;
     private final KolProfileRepository kolProfileRepository;
-    private final AppUserRepository userRepository;
 
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     @Transactional(propagation = Propagation.REQUIRES_NEW)
@@ -132,7 +127,5 @@ public class BookingNotificationListener {
     private void notify(Long userId, NotificationType type, String title, String message, String link) {
         if (userId == null) return;
         notificationService.send(userId, type, title, message, link);
-        userRepository.findById(userId).map(AppUser::getEmail)
-                .ifPresent(email -> emailService.sendNotification(email, title, message, link));
     }
 }

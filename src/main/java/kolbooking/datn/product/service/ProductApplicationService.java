@@ -1,9 +1,6 @@
 package kolbooking.datn.product.service;
 
-import kolbooking.datn.auth.domain.AppUser;
 import kolbooking.datn.auth.domain.Role;
-import kolbooking.datn.auth.repository.AppUserRepository;
-import kolbooking.datn.auth.service.EmailService;
 import kolbooking.datn.booking.domain.Booking;
 import kolbooking.datn.booking.domain.BookingStatus;
 import kolbooking.datn.booking.event.BookingStatusChangedEvent;
@@ -60,8 +57,6 @@ public class ProductApplicationService {
     private final BrandProfileService brandProfileService;
     private final BookingService bookingService;
     private final NotificationService notificationService;
-    private final EmailService emailService;
-    private final AppUserRepository userRepository;
 
     // ---- KOL side ------------------------------------------------------------------------------
 
@@ -448,8 +443,6 @@ public class ProductApplicationService {
             return;
         }
         notificationService.send(userId, type, title, message, link);
-        userRepository.findById(userId).map(AppUser::getEmail)
-                .ifPresent(email -> emailService.sendNotification(email, title, message, link));
     }
 
     private static PageRequest pageable(int page, int size) {

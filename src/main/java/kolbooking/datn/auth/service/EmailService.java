@@ -78,19 +78,6 @@ public class EmailService {
                 () -> log.info("[DEV-MAIL] Password reset to={} link={}", to, link));
     }
 
-    @Async
-    public void sendNotification(String to, String subject, String body, String link) {
-        if (to == null) return;
-        String absoluteLink = link == null ? null
-                : (link.startsWith("http") ? link : frontendUrl + link);
-        String html = layout(subject,
-                "<p>" + escape(body) + "</p>",
-                absoluteLink == null ? null : "Xem chi tiết", absoluteLink,
-                null);
-        dispatch(to, subject + " - KOL Booking", html,
-                () -> log.info("[DEV-MAIL] Notification to={} subject={} link={}", to, subject, absoluteLink));
-    }
-
     private void dispatch(String to, String subject, String html, Runnable devFallback) {
         if (devMode) {
             devFallback.run();
