@@ -21,7 +21,8 @@ public final class BookingStateMachine {
                     BookingStatus.DELIVERED, BookingStatus.CANCELLED_BY_ADMIN)),
             Map.entry(BookingStatus.DELIVERED, EnumSet.of(
                     BookingStatus.COMPLETED, BookingStatus.DISPUTED,
-                    BookingStatus.DELIVERY_REJECTED, BookingStatus.CANCELLED_BY_ADMIN)),
+                    BookingStatus.DELIVERY_REJECTED, BookingStatus.IN_PROGRESS,
+                    BookingStatus.CANCELLED_BY_ADMIN)),
             Map.entry(BookingStatus.DISPUTED, EnumSet.of(
                     BookingStatus.COMPLETED, BookingStatus.CANCELLED_BY_ADMIN)),
             Map.entry(BookingStatus.COMPLETED, EnumSet.noneOf(BookingStatus.class)),

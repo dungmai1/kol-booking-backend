@@ -67,6 +67,12 @@ class BookingStateMachineTest {
                 BookingStatus.DELIVERED, BookingStatus.DELIVERY_REJECTED));
     }
 
+    @Test
+    void requestRevision_returnsToInProgress() {
+        assertDoesNotThrow(() -> BookingStateMachine.ensureTransition(
+                BookingStatus.DELIVERED, BookingStatus.IN_PROGRESS));
+    }
+
     // ── EC-1: DELIVERY_REJECTED is terminal — cannot be re-approved afterwards ─
 
     @Test

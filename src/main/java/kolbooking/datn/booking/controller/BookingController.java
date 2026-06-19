@@ -6,6 +6,7 @@ import kolbooking.datn.booking.dto.BookingMessageResponse;
 import kolbooking.datn.booking.dto.BookingResponse;
 import kolbooking.datn.booking.dto.CreateBookingRequest;
 import kolbooking.datn.booking.dto.ReasonRequest;
+import kolbooking.datn.booking.dto.RequestRevisionRequest;
 import kolbooking.datn.booking.dto.SubmitDeliverableRequest;
 import kolbooking.datn.booking.service.BookingChatSseRegistry;
 import kolbooking.datn.booking.service.BookingService;
@@ -93,6 +94,13 @@ public class BookingController {
     public ApiResponse<BookingResponse> rejectDelivery(@PathVariable("id") Long id,
             @Valid @RequestBody(required = false) ReasonRequest req) {
         return ApiResponse.ok(bookingService.rejectDelivery(id, req));
+    }
+
+    @PostMapping("/{id}/request-revision")
+    @PreAuthorize("hasRole('BRAND')")
+    public ApiResponse<BookingResponse> requestRevision(@PathVariable("id") Long id,
+            @Valid @RequestBody RequestRevisionRequest req) {
+        return ApiResponse.ok(bookingService.requestRevision(id, req));
     }
 
     @PostMapping("/{id}/dispute")

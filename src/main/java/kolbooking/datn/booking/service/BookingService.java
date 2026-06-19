@@ -13,6 +13,7 @@ import kolbooking.datn.booking.dto.BookingMessageResponse;
 import kolbooking.datn.booking.dto.BookingResponse;
 import kolbooking.datn.booking.dto.CreateBookingRequest;
 import kolbooking.datn.booking.dto.ReasonRequest;
+import kolbooking.datn.booking.dto.RequestRevisionRequest;
 import kolbooking.datn.booking.dto.SubmitDeliverableRequest;
 import kolbooking.datn.booking.event.BookingMessageSentEvent;
 import kolbooking.datn.booking.event.BookingStatusChangedEvent;
@@ -45,6 +46,7 @@ import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 
 @Slf4j
@@ -201,13 +203,17 @@ public class BookingService {
                 .platform(req.platform())
                 .submittedUrl(req.submittedUrl())
                 .note(req.note())
-                .submittedAt(java.time.Instant.now())
+                .submittedAt(Instant.now())
                 .status(DeliverableStatus.SUBMITTED)
                 .build();
         deliverableRepository.save(d);
 
+        b.setRevisionFeedback(null);
+        b.setRevisionRequestedAt(null);
+        bookingRepository.save(b);
+
         Booking updated = transition(b, BookingStatus.DELIVERED, "Deliverable submitted");
-        return BookingMapper.toDto(updated);
+        return BookingMapper.toDto(updated, deliverableRepository.findByBookingId(updated.getId()));
     }
 
     @Transactional
@@ -240,6 +246,36 @@ public class BookingService {
         transition(b, BookingStatus.DELIVERY_REJECTED, reason);
         log.info("Delivery rejected: bookingId={}, brand={}, refund={}", b.getId(), brand.getId(), b.getBudget());
         return BookingMapper.toDto(b);
+    }
+
+    /**
+     * Brand requests KOL to revise submitted content. Booking returns to IN_PROGRESS;
+     * escrow is not refunded. Latest SUBMITTED deliverable is marked REJECTED with feedback.
+     */
+    @Transactional
+    public BookingResponse requestRevision(Long bookingId, RequestRevisionRequest req) {
+        Booking b = requireBookingFor(bookingId, Role.BRAND);
+        if (b.getStatus() != BookingStatus.DELIVERED) {
+            throw new BusinessException("Only DELIVERED bookings can request revision",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+        String reason = req.reason().trim();
+
+        deliverableRepository
+                .findTopByBookingIdAndStatusOrderBySubmittedAtDesc(b.getId(), DeliverableStatus.SUBMITTED)
+                .ifPresent(d -> {
+                    d.setStatus(DeliverableStatus.REJECTED);
+                    d.setBrandFeedback(reason);
+                    deliverableRepository.save(d);
+                });
+
+        b.setRevisionFeedback(reason);
+        b.setRevisionRequestedAt(Instant.now());
+        bookingRepository.save(b);
+
+        Booking updated = transition(b, BookingStatus.IN_PROGRESS, "Brand requested revision");
+        log.info("Revision requested: bookingId={}, brandProfileId={}", updated.getId(), updated.getBrandProfileId());
+        return BookingMapper.toDto(updated, deliverableRepository.findByBookingId(updated.getId()));
     }
 
     @Transactional

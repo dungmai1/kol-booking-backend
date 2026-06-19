@@ -21,7 +21,8 @@ public final class BookingMapper {
         List<SubmittedDeliverableDto> mapped = deliverables.stream()
                 .map(d -> new SubmittedDeliverableDto(
                         d.getId(), d.getType(), d.getPlatform(),
-                        d.getSubmittedUrl(), d.getNote(), d.getSubmittedAt(), d.getStatus()))
+                        d.getSubmittedUrl(), d.getNote(), d.getSubmittedAt(), d.getStatus(),
+                        d.getBrandFeedback()))
                 .toList();
         return new BookingResponse(
                 b.getId(), b.getBrandProfileId(), b.getBrandCompanyName(),
@@ -30,6 +31,7 @@ public final class BookingMapper {
                 b.getBudget(), b.getPlatformFeePercent(), b.getPlatformFeeAmount(), b.getKolNetAmount(),
                 b.getStartDate(), b.getEndDate(),
                 b.getStatus(), b.getRejectReason(), b.getCancelReason(),
+                b.getRevisionFeedback(), b.getRevisionRequestedAt(),
                 b.getInvoiceUrl(), b.getCreatedAt(), b.getUpdatedAt(),
                 mapped
         );

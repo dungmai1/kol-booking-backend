@@ -4,6 +4,7 @@ import kolbooking.datn.auth.domain.AppUser;
 import kolbooking.datn.auth.repository.AppUserRepository;
 import kolbooking.datn.auth.service.EmailService;
 import kolbooking.datn.booking.domain.Booking;
+import kolbooking.datn.booking.domain.BookingStatus;
 import kolbooking.datn.booking.event.BookingMessageSentEvent;
 import kolbooking.datn.booking.event.BookingStatusChangedEvent;
 import kolbooking.datn.booking.repository.BookingRepository;
@@ -68,9 +69,18 @@ public class BookingNotificationListener {
                 notify(kolUserId, NotificationType.BOOKING_CANCELLED,
                         "Booking đã huỷ", "Booking đã huỷ: " + title, link);
             }
-            case IN_PROGRESS -> notify(kolUserId, NotificationType.PAYMENT_SUCCESS,
-                    "Thanh toán thành công",
-                    "Brand đã thanh toán cho booking: " + title + ". Hãy thực hiện chiến dịch.", link);
+            case IN_PROGRESS -> {
+                if (event.fromStatus() == BookingStatus.DELIVERED) {
+                    notify(kolUserId, NotificationType.DELIVERY_REVISION_REQUESTED,
+                            "Brand yêu cầu chỉnh sửa",
+                            "Brand gửi feedback chỉnh sửa cho booking: " + title
+                                    + ". Hãy xem và nộp lại nội dung.", link);
+                } else {
+                    notify(kolUserId, NotificationType.PAYMENT_SUCCESS,
+                            "Thanh toán thành công",
+                            "Brand đã thanh toán cho booking: " + title + ". Hãy thực hiện chiến dịch.", link);
+                }
+            }
             case DELIVERED -> notify(brandUserId, NotificationType.DELIVERABLE_SUBMITTED,
                     "Có deliverable mới",
                     "KOL " + kol.getDisplayName() + " đã submit deliverable cho: " + title, link);

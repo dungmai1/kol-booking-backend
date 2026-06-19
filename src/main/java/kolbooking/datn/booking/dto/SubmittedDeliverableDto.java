@@ -13,5 +13,6 @@ public record SubmittedDeliverableDto(
         String submittedUrl,
         String note,
         Instant submittedAt,
-        DeliverableStatus status
+        DeliverableStatus status,
+        String brandFeedback
 ) {}

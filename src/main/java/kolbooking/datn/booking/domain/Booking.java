@@ -85,6 +85,12 @@ public class Booking {
     @Column(name = "cancel_reason", columnDefinition = "text")
     private String cancelReason;
 
+    @Column(name = "revision_feedback", columnDefinition = "text")
+    private String revisionFeedback;
+
+    @Column(name = "revision_requested_at")
+    private Instant revisionRequestedAt;
+
     @Column(name = "invoice_url", length = 500)
     private String invoiceUrl;
 

@@ -56,6 +56,9 @@ public class BookingDeliverable {
     @Column(nullable = false, length = 32)
     private DeliverableStatus status;
 
+    @Column(name = "brand_feedback", columnDefinition = "TEXT")
+    private String brandFeedback;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

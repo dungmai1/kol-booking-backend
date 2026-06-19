@@ -25,6 +25,8 @@ public record BookingResponse(
         BookingStatus status,
         String rejectReason,
         String cancelReason,
+        String revisionFeedback,
+        Instant revisionRequestedAt,
         String invoiceUrl,
         Instant createdAt,
         Instant updatedAt,
