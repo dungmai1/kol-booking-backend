@@ -50,7 +50,7 @@ public class EmailService {
 
     @Async
     public void sendEmailVerification(String to, String token) {
-        String link = appUrl + "/api/v1/auth/verify-email?token=" + token;
+        String link = normalizedFrontendUrl() + "/auth/verify-email?token=" + token;
         String html = layout("Xác nhận địa chỉ email",
                 """
                 <p>Chào bạn,</p>
@@ -76,6 +76,10 @@ public class EmailService {
                 "Liên kết có hiệu lực trong 2 giờ. Nếu bạn không yêu cầu, hãy bỏ qua email này.");
         dispatch(to, "Đặt lại mật khẩu - KOL Booking", html,
                 () -> log.info("[DEV-MAIL] Password reset to={} link={}", to, link));
+    }
+
+    private String normalizedFrontendUrl() {
+        return frontendUrl.endsWith("/") ? frontendUrl.substring(0, frontendUrl.length() - 1) : frontendUrl;
     }
 
     private void dispatch(String to, String subject, String html, Runnable devFallback) {

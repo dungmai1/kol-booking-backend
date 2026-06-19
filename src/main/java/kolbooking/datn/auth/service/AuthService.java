@@ -117,6 +117,13 @@ public class AuthService {
                 .orElseThrow(() -> new BusinessException(
                         "User not found", ErrorCode.UNAUTHORIZED, HttpStatus.UNAUTHORIZED));
 
+        if (user.getStatus() == UserStatus.BANNED) {
+            throw new BusinessException("Account banned", ErrorCode.ACCOUNT_BANNED, HttpStatus.FORBIDDEN);
+        }
+        if (user.getStatus() == UserStatus.INACTIVE) {
+            throw new BusinessException("Account is deactivated", ErrorCode.ACCOUNT_INACTIVE, HttpStatus.FORBIDDEN);
+        }
+
         stored.setRevoked(true);
         refreshTokenRepository.save(stored);
 

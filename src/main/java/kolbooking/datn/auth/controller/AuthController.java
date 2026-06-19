@@ -100,7 +100,7 @@ public class AuthController {
                 + "&email=" + urlEncode(tokens.email())
                 + "&role=" + tokens.role().name()
                 + "&expiresIn=" + tokens.accessTokenExpiresInSeconds();
-        return URI.create(normalizedFrontendUrl() + "/#" + fragment);
+        return URI.create(normalizedFrontendUrl() + "/auth/email-verified#" + fragment);
     }
 
     private String normalizedFrontendUrl() {

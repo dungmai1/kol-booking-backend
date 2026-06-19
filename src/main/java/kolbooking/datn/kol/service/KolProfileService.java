@@ -102,6 +102,10 @@ public class KolProfileService {
             throw new BusinessException("Ngày sinh không thể trong tương lai",
                     ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
         }
+        if (req.dateOfBirth() != null && req.dateOfBirth().isAfter(java.time.LocalDate.now().minusYears(18))) {
+            throw new BusinessException("Bạn phải từ 18 tuổi trở lên để đăng ký KOL trên nền tảng",
+                    ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
+        }
         if (req.dateOfBirth() != null && req.dateOfBirth().isBefore(java.time.LocalDate.now().minusYears(100))) {
             throw new BusinessException("Ngày sinh không hợp lệ",
                     ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);

@@ -143,8 +143,9 @@ public class AdminUserService {
         }
 
         user.setStatus(UserStatus.INACTIVE);
+        user.setEmail("deleted+" + user.getId() + "@deleted.local");
         userRepository.save(user);
         auditService.record("USER_DELETE", "AppUser", userId, null);
-        log.info("User {} soft-deleted (INACTIVE) by admin", userId);
+        log.info("User {} soft-deleted (INACTIVE, email anonymized) by admin", userId);
     }
 }
