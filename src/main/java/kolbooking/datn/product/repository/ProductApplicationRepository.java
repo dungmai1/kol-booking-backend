@@ -18,6 +18,10 @@ public interface ProductApplicationRepository extends JpaRepository<ProductAppli
 
     boolean existsByProductIdAndKolProfileIdAndStatus(Long productId, Long kolProfileId, ApplicationStatus status);
 
+    /** True if the KOL has an active (non-terminal) application for this product. */
+    boolean existsByProductIdAndKolProfileIdAndStatusIn(Long productId, Long kolProfileId,
+                                                        java.util.Collection<ApplicationStatus> statuses);
+
     Optional<ProductApplication> findByProductIdAndKolProfileId(Long productId, Long kolProfileId);
 
     Page<ProductApplication> findByProductId(Long productId, Pageable pageable);
@@ -32,9 +36,15 @@ public interface ProductApplicationRepository extends JpaRepository<ProductAppli
 
     Optional<ProductApplication> findByBookingId(Long bookingId);
 
-    /** Among {@code productIds}, returns those the given KOL has already applied to. */
+    /**
+     * Among {@code productIds}, returns those the given KOL has an active (non-terminal)
+     * application for. Terminal statuses (WITHDRAWN, REJECTED, BOOKING_CANCELLED) are excluded
+     * so that KOLs who withdrew or were rejected can re-apply.
+     */
     @Query("SELECT a.productId FROM ProductApplication a "
-            + "WHERE a.kolProfileId = :kolProfileId AND a.productId IN :productIds")
+            + "WHERE a.kolProfileId = :kolProfileId AND a.productId IN :productIds "
+            + "AND a.status IN :activeStatuses")
     List<Long> findAppliedProductIds(@Param("kolProfileId") Long kolProfileId,
-                                     @Param("productIds") Collection<Long> productIds);
+                                     @Param("productIds") Collection<Long> productIds,
+                                     @Param("activeStatuses") Collection<ApplicationStatus> activeStatuses);
 }

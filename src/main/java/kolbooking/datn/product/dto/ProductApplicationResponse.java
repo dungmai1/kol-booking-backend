@@ -20,6 +20,8 @@ public record ProductApplicationResponse(
         String message,
         BigDecimal proposedPrice,
         BigDecimal brandCounterPrice,
+        String brandNegotiationNote,
+        String kolNegotiationReply,
         ApplicationStatus status,
         Long bookingId,
         String rejectReason,

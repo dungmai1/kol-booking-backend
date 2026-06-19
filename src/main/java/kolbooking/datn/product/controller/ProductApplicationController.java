@@ -6,6 +6,7 @@ import kolbooking.datn.common.dto.PageResponse;
 import kolbooking.datn.product.dto.CounterOfferRequest;
 import kolbooking.datn.product.dto.ProductApplicationResponse;
 import kolbooking.datn.product.dto.RejectApplicationRequest;
+import kolbooking.datn.product.dto.RejectCounterRequest;
 import kolbooking.datn.product.service.ProductApplicationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -81,7 +82,9 @@ public class ProductApplicationController {
 
     @PostMapping("/{id}/reject-counter")
     @PreAuthorize("hasRole('KOL')")
-    public ApiResponse<ProductApplicationResponse> rejectCounter(@PathVariable("id") Long id) {
-        return ApiResponse.ok(applicationService.rejectCounter(id), "Đã từ chối giá thương lượng");
+    public ApiResponse<ProductApplicationResponse> rejectCounter(
+            @PathVariable("id") Long id,
+            @Valid @RequestBody(required = false) RejectCounterRequest request) {
+        return ApiResponse.ok(applicationService.rejectCounter(id, request), "Đã từ chối giá thương lượng");
     }
 }
