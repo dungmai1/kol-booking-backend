@@ -24,6 +24,13 @@ SET password_hash = EXCLUDED.password_hash,
     updated_at = NOW();
 
 -- m.thang3001 handled by V32 (re-run safe: deletes then re-seeds full KOL profile)
+-- Must delete bookings first because booking.kol_profile_id is RESTRICT (not CASCADE)
+DELETE FROM booking
+WHERE kol_profile_id = (
+    SELECT kp.id FROM kol_profile kp
+    JOIN app_user u ON u.id = kp.user_id
+    WHERE u.email = 'm.thang3001@seed.local'
+);
 DELETE FROM app_user WHERE email = 'm.thang3001@seed.local';
 
 WITH new_user AS (
