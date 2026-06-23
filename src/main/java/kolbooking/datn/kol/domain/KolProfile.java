@@ -68,7 +68,7 @@ public class KolProfile {
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Column(length = 100)
+    @Column(length = 255)
     private String city;
 
     @Column(length = 100)

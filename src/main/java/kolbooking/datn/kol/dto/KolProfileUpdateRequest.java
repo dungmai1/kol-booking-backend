@@ -17,7 +17,7 @@ public record KolProfileUpdateRequest(
         @Size(max = 2000) String bio,
         Gender gender,
         @PastOrPresent LocalDate dateOfBirth,
-        @Size(max = 100) String city,
+        @Size(max = 255) String city,
         @Size(max = 100) String country,
         Set<Long> categoryIds
 ) {}
