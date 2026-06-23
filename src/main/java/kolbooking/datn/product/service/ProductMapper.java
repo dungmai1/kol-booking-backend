@@ -14,7 +14,7 @@ public final class ProductMapper {
                                         String categoryName, boolean hasApplied) {
         return new ProductResponse(
                 p.getId(), p.getBrandProfileId(), brandCompanyName,
-                p.getTitle(), p.getDescription(), p.getImageUrl(),
+                p.getTitle(), p.getDescription(), p.getImageUrl(), p.getAttachmentUrl(),
                 p.getBudget(), p.getCategoryId(), categoryName,
                 p.getRequiredPlatform(), p.getMinFollowers(), p.getSlots(),
                 p.getStatus(), p.getDeadline(), p.getApplicationCount(),

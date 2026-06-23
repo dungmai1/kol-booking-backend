@@ -13,6 +13,7 @@ public record ProductCreateRequest(
         @NotBlank @Size(max = 200) String title,
         @Size(max = 5000) String description,
         @Size(max = 500) String imageUrl,
+        @Size(max = 500) String attachmentUrl,
         @PositiveOrZero BigDecimal budget,
         Long categoryId,
         Platform requiredPlatform,

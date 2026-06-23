@@ -62,6 +62,7 @@ public class ProductService {
                 .title(req.title())
                 .description(req.description())
                 .imageUrl(req.imageUrl())
+                .attachmentUrl(blankToNull(req.attachmentUrl()))
                 .budget(req.budget())
                 .categoryId(req.categoryId())
                 .requiredPlatform(req.requiredPlatform())
@@ -86,6 +87,7 @@ public class ProductService {
         if (req.title() != null) p.setTitle(req.title());
         if (req.description() != null) p.setDescription(req.description());
         if (req.imageUrl() != null) p.setImageUrl(req.imageUrl());
+        if (req.attachmentUrl() != null) p.setAttachmentUrl(blankToNull(req.attachmentUrl()));
         if (req.budget() != null) p.setBudget(req.budget());
         if (req.categoryId() != null) {
             validateCategory(req.categoryId());
@@ -245,5 +247,9 @@ public class ProductService {
         if (size <= 0 || size > 100) size = 20;
         if (page < 0) page = 0;
         return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

@@ -21,27 +21,12 @@ import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import java.io.IOException;
 import java.net.URI;
 import java.time.LocalDate;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Slf4j
 @Service
 @ConditionalOnProperty(name = "app.storage.provider", havingValue = "r2")
 public class R2StorageService implements StorageService {
-
-    private static final long MAX_IMAGE_BYTES = 5L * 1024 * 1024;
-    private static final long MAX_VIDEO_BYTES = 100L * 1024 * 1024;
-    private static final Set<String> ALLOWED_IMAGE = Set.of("image/jpeg", "image/png", "image/gif", "image/webp");
-    private static final Set<String> ALLOWED_VIDEO = Set.of("video/mp4");
-    private static final Map<String, String> EXTENSION_TO_MIME = Map.of(
-            ".jpg", "image/jpeg",
-            ".jpeg", "image/jpeg",
-            ".png", "image/png",
-            ".gif", "image/gif",
-            ".webp", "image/webp",
-            ".mp4", "video/mp4"
-    );
 
     private final S3Client s3Client;
     private final String bucket;
@@ -73,26 +58,11 @@ public class R2StorageService implements StorageService {
 
     @Override
     public String store(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new BusinessException("File is empty", ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
-        }
-        String contentType = resolveContentType(file);
-        boolean isImage = ALLOWED_IMAGE.contains(contentType);
-        boolean isVideo = ALLOWED_VIDEO.contains(contentType);
-        if (!isImage && !isVideo) {
-            throw new BusinessException("Unsupported content type: " + contentType
-                    + " (allowed images: JPEG, PNG, GIF, WEBP; video: MP4)",
-                    ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
-        }
-        long maxBytes = isImage ? MAX_IMAGE_BYTES : MAX_VIDEO_BYTES;
-        if (file.getSize() > maxBytes) {
-            long maxMb = maxBytes / (1024 * 1024);
-            throw new BusinessException("File exceeds size limit of " + maxMb + " MB",
-                    ErrorCode.VALIDATION_FAILED, HttpStatus.BAD_REQUEST);
-        }
+        UploadFilePolicy.ValidatedUpload validated = UploadFilePolicy.validate(file);
+        String contentType = validated.contentType();
 
         try {
-            String ext = extractExtension(file.getOriginalFilename());
+            String ext = UploadFilePolicy.extractExtension(file.getOriginalFilename());
             LocalDate today = LocalDate.now();
             String key = String.format("%d/%02d/%s%s",
                     today.getYear(),
@@ -115,24 +85,5 @@ public class R2StorageService implements StorageService {
             throw new BusinessException("Failed to upload file",
                     ErrorCode.INTERNAL_ERROR, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-    }
-
-    private String resolveContentType(MultipartFile file) {
-        String contentType = file.getContentType();
-        if (contentType != null && (ALLOWED_IMAGE.contains(contentType) || ALLOWED_VIDEO.contains(contentType))) {
-            return contentType;
-        }
-        String ext = extractExtension(file.getOriginalFilename());
-        String inferred = EXTENSION_TO_MIME.get(ext);
-        return inferred != null ? inferred : contentType;
-    }
-
-    private String extractExtension(String originalFilename) {
-        if (originalFilename == null) return "";
-        int idx = originalFilename.lastIndexOf('.');
-        if (idx < 0) return "";
-        String ext = originalFilename.substring(idx).toLowerCase();
-        if (!ext.matches("^\\.[a-z0-9]{1,10}$")) return "";
-        return ext;
     }
 }

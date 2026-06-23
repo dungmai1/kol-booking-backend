@@ -14,6 +14,7 @@ public record ProductResponse(
         String title,
         String description,
         String imageUrl,
+        String attachmentUrl,
         BigDecimal budget,
         Long categoryId,
         String categoryName,

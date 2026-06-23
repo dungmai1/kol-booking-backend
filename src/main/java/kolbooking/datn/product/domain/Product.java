@@ -50,6 +50,10 @@ public class Product {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    /** Optional contract / terms document for KOLs to review before applying. */
+    @Column(name = "attachment_url", length = 500)
+    private String attachmentUrl;
+
     /** Budget per KOL (nullable: "thoả thuận"). Used as the booking budget when no proposed price. */
     @Column(precision = 15, scale = 2)
     private BigDecimal budget;
