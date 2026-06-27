@@ -8,6 +8,8 @@ import kolbooking.datn.common.exception.ErrorCode;
 import kolbooking.datn.common.exception.ResourceNotFoundException;
 import kolbooking.datn.common.util.SecurityUtils;
 import kolbooking.datn.kol.service.KolProfileService;
+import kolbooking.datn.notification.domain.NotificationType;
+import kolbooking.datn.notification.service.NotificationService;
 import kolbooking.datn.product.domain.ApplicationMessage;
 import kolbooking.datn.product.domain.ApplicationStatus;
 import kolbooking.datn.product.domain.Product;
@@ -23,9 +25,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 @Slf4j
@@ -41,6 +46,8 @@ public class ApplicationChatService {
     private final KolProfileService kolProfileService;
     private final BrandProfileService brandProfileService;
     private final ApplicationChatSseRegistry chatSseRegistry;
+    private final NotificationService notificationService;
+    private final PlatformTransactionManager txManager;
 
     // ---- SSE -------------------------------------------------------------------------------
 
@@ -80,11 +87,30 @@ public class ApplicationChatService {
         msg = messageRepository.save(msg);
 
         ApplicationMessageResponse response = ApplicationMessageResponse.from(msg);
-        // Push SSE after commit so recipient fetching messages sees committed data
+
+        // Resolve recipient notification target before the transaction closes
+        final Long recipientUserId = resolveRecipientUserId(app, role);
+        final String productTitle = productRepository.findById(app.getProductId())
+                .map(Product::getTitle).orElse("sản phẩm");
+
+        // Push SSE and in-app notification after commit so recipient sees committed data
+        final TransactionTemplate newTx = new TransactionTemplate(txManager);
+        newTx.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override
             public void afterCommit() {
                 chatSseRegistry.push(applicationId, response);
+                if (recipientUserId != null) {
+                    newTx.execute(status -> {
+                        notificationService.send(
+                                recipientUserId,
+                                NotificationType.NEW_MESSAGE,
+                                "Tin nhắn thương lượng mới",
+                                "Bạn có tin nhắn mới trong ứng tuyển \"" + productTitle + "\"",
+                                "/applications/" + applicationId + "/chat");
+                        return null;
+                    });
+                }
             }
         });
 
@@ -103,6 +129,23 @@ public class ApplicationChatService {
                 applicationId,
                 PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return PageResponse.of(result.map(ApplicationMessageResponse::from));
+    }
+
+    // ---- Helpers ---------------------------------------------------------------------------
+
+    private Long resolveRecipientUserId(ProductApplication app, Role senderRole) {
+        try {
+            if (senderRole == Role.BRAND) {
+                return kolProfileService.getById(app.getKolProfileId()).getUserId();
+            } else {
+                Product product = productRepository.findById(app.getProductId()).orElse(null);
+                if (product == null) return null;
+                return brandProfileService.getById(product.getBrandProfileId()).getUserId();
+            }
+        } catch (Exception e) {
+            log.warn("Could not resolve notification recipient for application {}: {}", app.getId(), e.getMessage());
+            return null;
+        }
     }
 
     // ---- Access control --------------------------------------------------------------------
