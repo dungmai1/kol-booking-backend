@@ -365,6 +365,33 @@ public class ProductApplicationService {
         return ProductMapper.toDto(a, kol);
     }
 
+    // ---- Single-application read (KOL or Brand party) ----------------------------------------
+
+    @Transactional(readOnly = true)
+    public ProductApplicationResponse getOne(Long applicationId) {
+        ProductApplication a = getApplication(applicationId);
+        Long userId = SecurityUtils.currentUserId();
+        Role role = SecurityUtils.currentRole();
+
+        if (role == Role.KOL) {
+            KolProfile kol = kolProfileService.getByUserId(userId);
+            if (!kol.getId().equals(a.getKolProfileId())) {
+                throw new BusinessException("Không phải ứng tuyển của bạn", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
+            }
+            return ProductMapper.toDto(a, kol);
+        } else if (role == Role.BRAND) {
+            Product product = productRepository.findById(a.getProductId())
+                    .orElseThrow(() -> ResourceNotFoundException.of("Product", a.getProductId()));
+            Long brandId = brandProfileService.getByUserId(userId).getId();
+            if (!brandId.equals(product.getBrandProfileId())) {
+                throw new BusinessException("Không phải sản phẩm của bạn", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
+            }
+            KolProfile kol = kolProfileRepository.findById(a.getKolProfileId()).orElse(null);
+            return ProductMapper.toDto(a, kol);
+        }
+        throw new BusinessException("Không có quyền truy cập", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
+    }
+
     // ---- Booking cancellation → slot reopen ---------------------------------------------------
 
     /**

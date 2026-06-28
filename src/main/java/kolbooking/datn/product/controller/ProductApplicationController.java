@@ -25,6 +25,14 @@ public class ProductApplicationController {
 
     private final ProductApplicationService applicationService;
 
+    // ---- Common ----
+
+    @GetMapping("/{id}")
+    @PreAuthorize("hasAnyRole('KOL','BRAND')")
+    public ApiResponse<ProductApplicationResponse> getOne(@PathVariable("id") Long id) {
+        return ApiResponse.ok(applicationService.getOne(id));
+    }
+
     // ---- KOL ----
 
     @GetMapping("/mine")
