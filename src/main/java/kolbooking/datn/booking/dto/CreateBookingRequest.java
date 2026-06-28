@@ -16,5 +16,6 @@ public record CreateBookingRequest(
         @Size(max = 2000) String deliverables,
         @NotNull @DecimalMin(value = "1000", message = "Ngân sách tối thiểu 1,000 VND") BigDecimal budget,
         @NotNull @FutureOrPresent(message = "Ngày bắt đầu không được trong quá khứ") LocalDate startDate,
-        @NotNull LocalDate endDate
+        @NotNull LocalDate endDate,
+        @Size(max = 500) String attachmentUrl
 ) {}

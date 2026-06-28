@@ -39,6 +39,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -52,6 +54,7 @@ import java.util.stream.Collectors;
 public class ProductApplicationService {
 
     private static final Set<ApplicationStatus> TERMINAL_STATUSES = ApplicationStatus.TERMINAL;
+    private static final ZoneId APPLICATION_DEADLINE_ZONE = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private final ProductRepository productRepository;
     private final ProductApplicationRepository applicationRepository;
@@ -75,6 +78,11 @@ public class ProductApplicationService {
                 .orElseThrow(() -> ResourceNotFoundException.of("Product", productId));
         if (product.getStatus() != ProductStatus.OPEN) {
             throw new BusinessException("Sản phẩm không còn nhận ứng tuyển",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+
+        if (isPastDeadline(product)) {
+            throw new BusinessException("Chiến dịch đã quá hạn ứng tuyển",
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
 
@@ -265,7 +273,7 @@ public class ProductApplicationService {
                 product.getBrandProfileId(), brandName,
                 kol.getId(), kol.getDisplayName(),
                 product.getTitle(), product.getDescription(), null,
-                budget, null, product.getDeadline());
+                product.getAttachmentUrl(), budget, null, product.getDeadline());
 
         a.setStatus(ApplicationStatus.ACCEPTED);
         a.setBookingId(booking.getId());
@@ -395,13 +403,13 @@ public class ProductApplicationService {
     // ---- Booking cancellation → slot reopen ---------------------------------------------------
 
     /**
-     * When a booking created from a product application is cancelled or rejected before payment
-     * (i.e. while still PENDING), free the slot and reopen the product if it was auto-closed.
+     * When a booking created from a product application is cancelled or rejected before payment,
+     * free the slot and reopen the product if it was auto-closed.
      */
     @EventListener
     @Transactional
     public void onBookingCancelledOrRejected(BookingStatusChangedEvent event) {
-        if (event.fromStatus() != BookingStatus.PENDING) return;
+        if (event.fromStatus() != BookingStatus.PENDING && event.fromStatus() != BookingStatus.ACCEPTED) return;
         if (event.toStatus() != BookingStatus.CANCELLED
                 && event.toStatus() != BookingStatus.REJECTED) return;
 
@@ -501,5 +509,10 @@ public class ProductApplicationService {
         if (size <= 0 || size > 100) size = 20;
         if (page < 0) page = 0;
         return PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+    }
+
+    private static boolean isPastDeadline(Product product) {
+        LocalDate deadline = product.getDeadline();
+        return deadline != null && deadline.isBefore(LocalDate.now(APPLICATION_DEADLINE_ZONE));
     }
 }

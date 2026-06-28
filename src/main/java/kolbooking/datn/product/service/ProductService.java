@@ -168,7 +168,9 @@ public class ProductService {
     public Product requireOwnedProduct(Long id) {
         Product p = productRepository.findById(id)
                 .orElseThrow(() -> ResourceNotFoundException.of("Product", id));
-        BrandProfile brand = brandProfileService.getByUserId(SecurityUtils.currentUserId());
+        BrandProfile brand = brandProfileRepository.findByUserId(SecurityUtils.currentUserId())
+                .orElseThrow(() -> new BusinessException(
+                        "Không phải sản phẩm của bạn", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN));
         if (!p.getBrandProfileId().equals(brand.getId())) {
             throw new BusinessException("Không phải sản phẩm của bạn", ErrorCode.FORBIDDEN, HttpStatus.FORBIDDEN);
         }

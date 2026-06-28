@@ -54,6 +54,9 @@ public class Booking {
     @Column(columnDefinition = "text")
     private String deliverables;
 
+    @Column(name = "attachment_url", length = 500)
+    private String attachmentUrl;
+
     @Column(nullable = false, precision = 15, scale = 2)
     private BigDecimal budget;
 

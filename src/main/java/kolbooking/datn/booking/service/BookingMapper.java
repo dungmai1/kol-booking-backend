@@ -28,6 +28,7 @@ public final class BookingMapper {
                 b.getId(), b.getBrandProfileId(), b.getBrandCompanyName(),
                 b.getKolProfileId(), b.getKolDisplayName(),
                 b.getCampaignTitle(), b.getCampaignBrief(), b.getDeliverables(),
+                b.getAttachmentUrl(),
                 b.getBudget(), b.getPlatformFeePercent(), b.getPlatformFeeAmount(), b.getKolNetAmount(),
                 b.getStartDate(), b.getEndDate(),
                 b.getStatus(), b.getRejectReason(), b.getCancelReason(),

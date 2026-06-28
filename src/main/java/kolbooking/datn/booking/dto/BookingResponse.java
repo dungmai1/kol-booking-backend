@@ -16,6 +16,7 @@ public record BookingResponse(
         String campaignTitle,
         String campaignBrief,
         String deliverables,
+        String attachmentUrl,
         BigDecimal budget,
         BigDecimal platformFeePercent,
         BigDecimal platformFeeAmount,

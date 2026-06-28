@@ -30,6 +30,9 @@ import kolbooking.datn.common.exception.ResourceNotFoundException;
 import kolbooking.datn.common.util.SecurityUtils;
 import kolbooking.datn.kol.domain.KolProfile;
 import kolbooking.datn.kol.service.KolProfileService;
+import kolbooking.datn.payment.domain.PaymentOrder;
+import kolbooking.datn.payment.domain.PaymentOrderStatus;
+import kolbooking.datn.payment.repository.PaymentOrderRepository;
 import kolbooking.datn.payment.service.WalletService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -61,6 +64,7 @@ public class BookingService {
     private final KolProfileService kolProfileService;
     private final BrandProfileService brandProfileService;
     private final WalletService walletService;
+    private final PaymentOrderRepository paymentOrderRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     @Lazy
@@ -92,6 +96,7 @@ public class BookingService {
                 .campaignTitle(req.campaignTitle())
                 .campaignBrief(req.campaignBrief())
                 .deliverables(req.deliverables())
+                .attachmentUrl(blankToNull(req.attachmentUrl()))
                 .budget(req.budget())
                 .platformFeePercent(platformFeePercent)
                 .startDate(req.startDate())
@@ -117,7 +122,7 @@ public class BookingService {
     public Booking createBookingFromApplication(Long brandProfileId, String brandCompanyName,
                                                 Long kolProfileId, String kolDisplayName,
                                                 String campaignTitle, String campaignBrief,
-                                                String deliverables, BigDecimal budget,
+                                                String deliverables, String attachmentUrl, BigDecimal budget,
                                                 LocalDate startDate, LocalDate endDate) {
         Booking b = Booking.builder()
                 .brandProfileId(brandProfileId)
@@ -127,6 +132,7 @@ public class BookingService {
                 .campaignTitle(campaignTitle)
                 .campaignBrief(campaignBrief)
                 .deliverables(deliverables)
+                .attachmentUrl(blankToNull(attachmentUrl))
                 .budget(budget)
                 .platformFeePercent(platformFeePercent)
                 .startDate(startDate)
@@ -171,14 +177,21 @@ public class BookingService {
     @Transactional
     public BookingResponse cancelByBrand(Long bookingId, ReasonRequest req) {
         Booking b = requireBookingFor(bookingId, Role.BRAND);
-        if (b.getStatus() != BookingStatus.PENDING) {
-            throw new BusinessException("Only PENDING bookings can be cancelled by Brand",
+        if (b.getStatus() != BookingStatus.PENDING && b.getStatus() != BookingStatus.ACCEPTED) {
+            throw new BusinessException("Only PENDING or unpaid ACCEPTED bookings can be cancelled by Brand",
+                    ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
+        }
+        PaymentOrder latestOrder = paymentOrderRepository.findFirstByBookingIdOrderByCreatedAtDesc(bookingId)
+                .orElse(null);
+        if (latestOrder != null && latestOrder.getStatus() == PaymentOrderStatus.PAID) {
+            throw new BusinessException("Booking đã được thanh toán, không thể hủy bằng luồng Brand thông thường",
                     ErrorCode.BUSINESS_ERROR, HttpStatus.CONFLICT);
         }
         String reason = req == null ? null : req.reason();
         Booking updated = transition(b, BookingStatus.CANCELLED, reason);
         updated.setCancelReason(reason);
         bookingRepository.save(updated);
+        cancelPendingPaymentOrder(latestOrder);
         return BookingMapper.toDto(updated);
     }
 
@@ -393,6 +406,18 @@ public class BookingService {
                 .changedByUser(userId)
                 .note(note)
                 .build());
+    }
+
+    private void cancelPendingPaymentOrder(PaymentOrder order) {
+        if (order == null || order.getStatus() != PaymentOrderStatus.PENDING) {
+            return;
+        }
+        order.setStatus(PaymentOrderStatus.CANCELLED);
+        paymentOrderRepository.save(order);
+    }
+
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 
     private Booking requireBookingFor(Long bookingId, Role role) {
